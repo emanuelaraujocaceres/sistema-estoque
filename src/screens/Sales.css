@@ -129,7 +129,7 @@
   display: grid;
   grid-template-columns: 1fr 380px;
   gap: var(--space-xl);
-  align-items: start; /* Alinha no topo */
+  align-items: start;
 }
 
 @media (max-width: 1024px) {
@@ -250,7 +250,6 @@
   padding: var(--space-xl);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--gray-200);
-  /* REMOVIDO: overflow-y, min-height, etc */
 }
 
 /* Lista de Produtos */
@@ -452,13 +451,13 @@
   color: var(--gray-600);
 }
 
-/* ========== COLUNA DO CARRINHO - SEM SCROLL INTERNO ========== */
+/* ========== COLUNA DO CARRINHO - CORREÇÃO ESPECÍFICA ========== */
 .cart-column {
   display: flex;
   flex-direction: column;
 }
 
-/* Seção do carrinho - SEM SCROLL INTERNO */
+/* Seção do carrinho - SEM QUALQUER SCROLL */
 .cart-section {
   background: white;
   border-radius: var(--radius-lg);
@@ -466,7 +465,8 @@
   border: 1px solid var(--gray-200);
   display: flex;
   flex-direction: column;
-  /* REMOVIDO: height, min-height, overflow */
+  /* GARANTINDO QUE NÃO TENHA SCROLL INTERNO */
+  overflow: visible !important;
 }
 
 /* Cabeçalho do carrinho */
@@ -489,13 +489,14 @@
   gap: var(--space-sm);
 }
 
-/* Área de conteúdo do carrinho - SEM SCROLL INTERNO */
+/* Área de conteúdo do carrinho - SEM SCROLL */
 .cart-content {
   display: flex;
   flex-direction: column;
   padding: var(--space-xl);
   padding-top: 0;
-  /* REMOVIDO: overflow-y, min-height */
+  /* GARANTINDO QUE NÃO TENHA SCROLL */
+  overflow: visible !important;
 }
 
 /* Carrinho Vazio */
@@ -532,16 +533,29 @@
   font-style: italic;
 }
 
-/* Lista de Itens do Carrinho - SEM SCROLL INTERNO */
+/* ====== CORREÇÃO ESPECÍFICA: LISTA DE ITENS SEM SCROLL ====== */
 .cart-items-container {
   margin-bottom: var(--space-lg);
-  /* REMOVIDO: overflow-y, min-height */
+  /* FORÇANDO SEM SCROLL INTERNO */
+  overflow: visible !important;
+  max-height: none !important;
+  min-height: auto !important;
+}
+
+/* REMOVENDO QUALQUER ESTILO DE SCROLLBAR */
+.cart-items-container::-webkit-scrollbar,
+.cart-items-list::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .cart-items-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  /* GARANTINDO EXPANSÃO NATURAL */
+  overflow: visible !important;
 }
 
 .cart-item {
@@ -812,11 +826,6 @@
 
 .checkout-note p {
   margin: 0;
-}
-
-/* Botão FIXO no rodapé - REMOVIDO */
-.sales-fixed-footer {
-  display: none;
 }
 
 /* Animações */
