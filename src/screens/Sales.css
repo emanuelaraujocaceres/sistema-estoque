@@ -124,12 +124,13 @@
   background: var(--gray-500);
 }
 
-/* Layout de Duas Colunas - SEM SCROLL INTERNO */
+/* ========== LAYOUT DE DUAS COLUNAS - CORRIGIDO ========== */
 .sales-layout {
   display: grid;
   grid-template-columns: 1fr 380px;
   gap: var(--space-xl);
-  align-items: start;
+  align-items: stretch; /* CORREÇÃO: Faz as colunas terem a mesma altura */
+  min-height: 0; /* Importante para grid items */
 }
 
 @media (max-width: 1024px) {
@@ -140,10 +141,11 @@
   }
 }
 
-/* Coluna de Produtos - SEM SCROLL INTERNO */
+/* ========== COLUNA DE PRODUTOS - CORRIGIDA ========== */
 .products-column {
   display: flex;
   flex-direction: column;
+  min-height: 0; /* Importante para flex dentro de grid */
 }
 
 .search-section {
@@ -242,19 +244,39 @@
   border-color: var(--primary);
 }
 
-/* Área dos produtos - SEM SCROLL INTERNO */
+/* Área dos produtos - COM MESMA ALTURA QUE O CARRINHO */
 .products-area {
+  flex: 1; /* OCUPA TODO O ESPAÇO DISPONÍVEL */
   background: white;
   border-radius: var(--radius-lg);
   margin-top: var(--space-md);
   padding: var(--space-xl);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Importante para scroll interno */
+}
+
+/* Área de conteúdo dos produtos (que pode ter scroll SE necessário) */
+.products-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Lista de Produtos */
 .products-list {
-  /* REMOVIDO: height: 100% */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto; /* APENAS SE NECESSÁRIO - será sobrescrito se não precisar */
+  padding-right: var(--space-sm);
+}
+
+/* REMOVENDO SCROLLBAR DA LISTA DE PRODUTOS (vai usar scroll principal) */
+.products-list::-webkit-scrollbar {
+  display: none;
 }
 
 /* Grid de Produtos */
@@ -396,6 +418,7 @@
   justify-content: center;
   padding: var(--space-2xl);
   color: var(--gray-600);
+  flex: 1;
 }
 
 .spinner {
@@ -417,6 +440,11 @@
   text-align: center;
   padding: var(--space-2xl);
   color: var(--gray-600);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .no-products-icon {
@@ -451,13 +479,14 @@
   color: var(--gray-600);
 }
 
-/* ========== COLUNA DO CARRINHO - CORREÇÃO ESPECÍFICA ========== */
+/* ========== COLUNA DO CARRINHO - MESMA ALTURA ========== */
 .cart-column {
   display: flex;
   flex-direction: column;
+  min-height: 0; /* Importante para flex dentro de grid */
 }
 
-/* Seção do carrinho - SEM QUALQUER SCROLL */
+/* Seção do carrinho - COM MESMA ALTURA DOS PRODUTOS */
 .cart-section {
   background: white;
   border-radius: var(--radius-lg);
@@ -465,8 +494,8 @@
   border: 1px solid var(--gray-200);
   display: flex;
   flex-direction: column;
-  /* GARANTINDO QUE NÃO TENHA SCROLL INTERNO */
-  overflow: visible !important;
+  flex: 1; /* OCUPA TODO O ESPAÇO DISPONÍVEL */
+  min-height: 0;
 }
 
 /* Cabeçalho do carrinho */
@@ -489,14 +518,14 @@
   gap: var(--space-sm);
 }
 
-/* Área de conteúdo do carrinho - SEM SCROLL */
+/* Área de conteúdo do carrinho */
 .cart-content {
   display: flex;
   flex-direction: column;
   padding: var(--space-xl);
   padding-top: 0;
-  /* GARANTINDO QUE NÃO TENHA SCROLL */
-  overflow: visible !important;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Carrinho Vazio */
@@ -504,6 +533,7 @@
   text-align: center;
   padding: var(--space-2xl);
   color: var(--gray-600);
+  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -533,29 +563,24 @@
   font-style: italic;
 }
 
-/* ====== CORREÇÃO ESPECÍFICA: LISTA DE ITENS SEM SCROLL ====== */
+/* Lista de Itens do Carrinho */
 .cart-items-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto; /* APENAS SE NECESSÁRIO */
   margin-bottom: var(--space-lg);
-  /* FORÇANDO SEM SCROLL INTERNO */
-  overflow: visible !important;
-  max-height: none !important;
-  min-height: auto !important;
+  padding-right: var(--space-sm);
 }
 
-/* REMOVENDO QUALQUER ESTILO DE SCROLLBAR */
-.cart-items-container::-webkit-scrollbar,
-.cart-items-list::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
+/* REMOVENDO SCROLLBAR DA LISTA DO CARRINHO (vai usar scroll principal) */
+.cart-items-container::-webkit-scrollbar {
+  display: none;
 }
 
 .cart-items-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  /* GARANTINDO EXPANSÃO NATURAL */
-  overflow: visible !important;
 }
 
 .cart-item {
@@ -870,12 +895,25 @@
 .products-grid .product-card:nth-child(7) { animation-delay: 0.7s; }
 .products-grid .product-card:nth-child(8) { animation-delay: 0.8s; }
 
+/* ========== JAVASCRIPT PARA REMOVER SCROLL INTERNO ========== */
+/* Vamos adicionar uma classe dinâmica quando não precisar de scroll interno */
+.no-internal-scroll .products-list,
+.no-internal-scroll .cart-items-container {
+  overflow-y: visible !important;
+}
+
 /* Responsividade */
 @media (max-width: 1024px) {
   .sales-layout {
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
+  }
+  
+  .products-area,
+  .cart-section {
+    flex: none;
+    height: auto;
   }
 }
 
