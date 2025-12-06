@@ -968,7 +968,7 @@ export default function Products() {
                           Valor: R$ {(p.stock * (p.cost || 0)).toFixed(2)}
                         </div>
                         
-                        {/* Controles de estoque rápido */}
+                        {/* Controles de estoque rápido - SEM BOTÕES +1 e +5 */}
                         {bulkStockMode ? (
                           <div className="bulk-stock-controls-row">
                             <div className="bulk-quantity">
@@ -991,25 +991,11 @@ export default function Products() {
                         ) : (
                           <div className="quick-stock-controls">
                             <button 
-                              className="button btn-sm btn-success"
-                              onClick={() => quickAddStock(p.id, 1)}
-                              title="Adicionar 1 unidade"
-                            >
-                              +1
-                            </button>
-                            <button 
-                              className="button btn-sm btn-success"
-                              onClick={() => quickAddStock(p.id, 5)}
-                              title="Adicionar 5 unidades"
-                            >
-                              +5
-                            </button>
-                            <button 
                               className="button btn-sm btn-info"
-                              onClick={() => openStockModal(p)}
-                              title="Mais opções de estoque"
+                              onClick={() => handleRestock(p.id, p.name)}
+                              title="Repor estoque"
                             >
-                              📦
+                              ➕ Repor Estoque
                             </button>
                           </div>
                         )}
