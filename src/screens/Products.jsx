@@ -10,7 +10,8 @@ function emptyForm() {
     price: "", 
     stock: "", 
     min_stock: "",
-    sku: ""
+    sku: "",
+    category: ""
   }; 
 }
 
@@ -23,6 +24,10 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [stockModalProduct, setStockModalProduct] = useState(null);
+  const [bulkStockMode, setBulkStockMode] = useState(false);
+  const [bulkStockUpdates, setBulkStockUpdates] = useState({});
 
   useEffect(() => {
     try {
@@ -32,6 +37,13 @@ export default function Products() {
         throw new Error("Dados de produtos inválidos");
       }
       setList(products);
+      
+      // Inicializar updates para modo bulk
+      const initialUpdates = {};
+      products.forEach(p => {
+        initialUpdates[p.id] = 0;
+      });
+      setBulkStockUpdates(initialUpdates);
     } catch (error) {
       console.error("Erro ao inicializar produtos:", error);
       setError("Erro ao carregar produtos. Verifique o console.");
@@ -39,7 +51,9 @@ export default function Products() {
     }
   }, []);
 
-  // ====== FUNÇÃO SIMPLES PARA REPOR ESTOQUE ======
+  // ====== FUNÇÕES DE ESTOQUE ======
+
+  // 1. Repor estoque com prompt simples
   const handleRestock = (productId, productName) => {
     const currentProduct = list.find(p => p.id === productId);
     if (!currentProduct) return;
@@ -56,11 +70,78 @@ export default function Products() {
     }
     
     const addQty = parseInt(quantity);
-    
-    // Atualizar no localStorage
+    applyStockUpdate(productId, addQty);
+  };
+
+  // 2. Modal para adicionar estoque com opções rápidas
+  const openStockModal = (product) => {
+    setStockModalProduct(product);
+    setShowStockModal(true);
+  };
+
+  // 3. Adicionar estoque rápido com botões +1, +5, +10
+  const quickAddStock = (productId, quantity) => {
+    applyStockUpdate(productId, quantity);
+  };
+
+  // 4. Aplicar atualização de estoque
+  const applyStockUpdate = (productId, quantity) => {
     const products = getProducts();
     const updatedProducts = products.map(p => {
       if (p.id === productId) {
+        const newStock = p.stock + quantity;
+        return {
+          ...p,
+          stock: Math.max(0, newStock),
+          updated_at: new Date().toISOString()
+        };
+      }
+      return p;
+    });
+    
+    localStorage.setItem('products', JSON.stringify(updatedProducts));
+    setList(updatedProducts);
+    
+    // Feedback visual
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      showNotification(`✅ ${quantity} unidades adicionadas ao estoque de "${product.name}"!`, 'success');
+    }
+  };
+
+  // 5. Modo bulk para adicionar estoque em vários produtos
+  const toggleBulkStockMode = () => {
+    setBulkStockMode(!bulkStockMode);
+    if (!bulkStockMode) {
+      // Reiniciar contadores quando entrar no modo bulk
+      const initialUpdates = {};
+      list.forEach(p => {
+        initialUpdates[p.id] = 0;
+      });
+      setBulkStockUpdates(initialUpdates);
+    }
+  };
+
+  // 6. Atualizar contador no modo bulk
+  const updateBulkStock = (productId, change) => {
+    setBulkStockUpdates(prev => ({
+      ...prev,
+      [productId]: Math.max(0, (prev[productId] || 0) + change)
+    }));
+  };
+
+  // 7. Aplicar todas as atualizações em bulk
+  const applyBulkStock = () => {
+    const hasUpdates = Object.values(bulkStockUpdates).some(val => val > 0);
+    if (!hasUpdates) {
+      showNotification("⚠️ Nenhuma alteração de estoque foi feita.", 'warning');
+      return;
+    }
+
+    const products = getProducts();
+    const updatedProducts = products.map(p => {
+      const addQty = bulkStockUpdates[p.id] || 0;
+      if (addQty > 0) {
         return {
           ...p,
           stock: p.stock + addQty,
@@ -71,13 +152,92 @@ export default function Products() {
     });
     
     localStorage.setItem('products', JSON.stringify(updatedProducts));
-    
-    // Atualizar estado
     setList(updatedProducts);
     
-    // Feedback visual
-    alert(`✅ ${addQty} unidades adicionadas ao estoque de "${productName}"!\n\nNovo estoque: ${currentProduct.stock + addQty} unidades`);
+    // Resetar modo bulk
+    setBulkStockMode(false);
+    const resetUpdates = {};
+    updatedProducts.forEach(p => {
+      resetUpdates[p.id] = 0;
+    });
+    setBulkStockUpdates(resetUpdates);
+    
+    showNotification(`✅ Estoque atualizado em ${Object.values(bulkStockUpdates).filter(v => v > 0).length} produtos!`, 'success');
   };
+
+  // Função para mostrar notificações
+  const showNotification = (message, type = 'info') => {
+    // Cria elemento de notificação
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+      <div class="notification-content">
+        ${message}
+        <button class="notification-close">×</button>
+      </div>
+    `;
+    
+    // Estilos para a notificação
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#2ecc71' : type === 'warning' ? '#f39c12' : '#3498db'};
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 9999;
+      animation: slideInRight 0.3s ease;
+    `;
+    
+    const contentStyle = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+    `;
+    
+    const closeButtonStyle = `
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    `;
+    
+    notification.querySelector('.notification-content').style.cssText = contentStyle;
+    notification.querySelector('.notification-close').style.cssText = closeButtonStyle;
+    
+    // Adiciona ao DOM
+    document.body.appendChild(notification);
+    
+    // Configura botão de fechar
+    notification.querySelector('.notification-close').onclick = () => {
+      notification.style.animation = 'slideOutRight 0.3s ease';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    };
+    
+    // Remove automaticamente após 3 segundos
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }
+    }, 3000);
+  };
+
+  // ====== FUNÇÕES EXISTENTES ======
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -126,7 +286,7 @@ export default function Products() {
         ...form, 
         id: Date.now(),
         name: form.name.trim(),
-        sku: form.sku?.trim() || "",
+        sku: form.sku?.trim() || `PROD${Date.now()}`,
         price: Number(form.price) || 0,
         cost: Number(form.cost) || 0,
         stock: Math.max(0, Number(form.stock) || 0),
@@ -145,8 +305,7 @@ export default function Products() {
       setForm(emptyForm());
       setError(null);
       
-      // Feedback visual
-      alert(`✅ Produto "${prod.name}" adicionado com sucesso!`);
+      showNotification(`✅ Produto "${prod.name}" adicionado com sucesso!`, 'success');
     } catch (error) {
       console.error("Erro ao adicionar produto:", error);
       setError(`Erro ao adicionar produto: ${error.message}`);
@@ -206,7 +365,7 @@ export default function Products() {
       setEditing(false);
       setError(null);
       
-      alert(`✅ Produto "${updatedProduct.name}" atualizado com sucesso!`);
+      showNotification(`✅ Produto "${updatedProduct.name}" atualizado com sucesso!`, 'success');
     } catch (error) {
       console.error("Erro ao atualizar produto:", error);
       setError(`Erro ao atualizar produto: ${error.message}`);
@@ -232,10 +391,10 @@ export default function Products() {
       }
       
       setList(getProducts());
-      alert(`🗑️ Produto "${name}" excluído com sucesso!`);
+      showNotification(`🗑️ Produto "${name}" excluído com sucesso!`, 'warning');
     } catch (error) {
       console.error("Erro ao excluir produto:", error);
-      alert(`❌ Erro ao excluir produto: ${error.message}`);
+      showNotification(`❌ Erro ao excluir produto: ${error.message}`, 'error');
     }
   }
 
@@ -244,7 +403,7 @@ export default function Products() {
       exportData();
     } catch (error) {
       console.error("Erro ao exportar dados:", error);
-      alert("Erro ao exportar dados");
+      showNotification("Erro ao exportar dados", 'error');
     }
   }
 
@@ -351,6 +510,89 @@ export default function Products() {
         </div>
       )}
 
+      {/* Botões de ação de estoque */}
+      {!bulkStockMode && (
+        <div className="card quick-actions-card">
+          <h3 className="form-title">
+            <span className="form-icon">⚡</span> 
+            Ações Rápidas de Estoque
+          </h3>
+          <div className="quick-actions">
+            <button 
+              className="button btn-primary btn-lg" 
+              onClick={() => {
+                // Resetar formulário para adicionar novo produto
+                setForm(emptyForm());
+                setEditing(false);
+                document.querySelector('.form-card')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              ➕ Adicionar Produto (Mesmo com Estoque 0)
+            </button>
+            <button 
+              className="button btn-success btn-lg"
+              onClick={toggleBulkStockMode}
+            >
+              📦 Adicionar Estoque em Vários Produtos
+            </button>
+          </div>
+          <p className="helper-text">
+            ⚡ <strong>Dica rápida:</strong> Você pode adicionar produtos mesmo com estoque zero e incrementar depois!
+          </p>
+        </div>
+      )}
+
+      {/* Modo Bulk Stock */}
+      {bulkStockMode && (
+        <div className="card bulk-stock-card">
+          <div className="bulk-stock-header">
+            <h3 className="form-title">
+              <span className="form-icon">📦</span> 
+              Adicionar Estoque em Massa
+            </h3>
+            <button 
+              className="button btn-danger btn-sm"
+              onClick={toggleBulkStockMode}
+            >
+              ❌ Sair do Modo Massa
+            </button>
+          </div>
+          
+          <div className="bulk-stock-info">
+            <p>⏺️ Selecione a quantidade para cada produto e clique em "Aplicar"</p>
+            <div className="bulk-stats">
+              <span className="stat-badge">
+                <strong>{Object.values(bulkStockUpdates).filter(v => v > 0).length}</strong> produtos para atualizar
+              </span>
+              <span className="stat-badge">
+                <strong>{Object.values(bulkStockUpdates).reduce((a, b) => a + b, 0)}</strong> unidades totais
+              </span>
+            </div>
+          </div>
+
+          <div className="bulk-stock-controls">
+            <button 
+              className="button btn-secondary"
+              onClick={() => {
+                const resetUpdates = {};
+                list.forEach(p => {
+                  resetUpdates[p.id] = 0;
+                });
+                setBulkStockUpdates(resetUpdates);
+              }}
+            >
+              🔄 Limpar Tudo
+            </button>
+            <button 
+              className="button btn-success"
+              onClick={applyBulkStock}
+            >
+              ✅ Aplicar Estoque em Massa
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* FORM */}
       <div className="card form-card">
         <h3 className="form-title">
@@ -440,16 +682,44 @@ export default function Products() {
               Estoque Atual
               <span className="helper">Quantidade disponível</span>
             </label>
-            <input 
-              className="input" 
-              type="number" 
-              name="stock" 
-              min="0"
-              placeholder="0"
-              value={form.stock} 
-              onChange={handleChange} 
-              disabled={loading}
-            />
+            <div className="stock-input-group">
+              <input 
+                className="input" 
+                type="number" 
+                name="stock" 
+                min="0"
+                placeholder="0"
+                value={form.stock} 
+                onChange={handleChange} 
+                disabled={loading}
+              />
+              <div className="quick-stock-buttons">
+                <button 
+                  type="button" 
+                  className="quick-stock-btn"
+                  onClick={() => setForm(f => ({ ...f, stock: (parseInt(f.stock) || 0) + 1 }))}
+                >
+                  +1
+                </button>
+                <button 
+                  type="button" 
+                  className="quick-stock-btn"
+                  onClick={() => setForm(f => ({ ...f, stock: (parseInt(f.stock) || 0) + 5 }))}
+                >
+                  +5
+                </button>
+                <button 
+                  type="button" 
+                  className="quick-stock-btn"
+                  onClick={() => setForm(f => ({ ...f, stock: (parseInt(f.stock) || 0) + 10 }))}
+                >
+                  +10
+                </button>
+              </div>
+            </div>
+            <small className="helper-text">
+              💡 Você pode adicionar o produto com estoque 0 e incrementar depois!
+            </small>
           </div>
 
           <div className="form-group">
@@ -489,18 +759,37 @@ export default function Products() {
               </button>
             </>
           ) : (
-            <button 
-              className="button btn-primary" 
-              onClick={handleAdd}
-              disabled={loading}
-            >
-              {loading ? "Adicionando..." : "➕ Adicionar Produto"}
-            </button>
+            <>
+              <button 
+                className="button btn-primary" 
+                onClick={handleAdd}
+                disabled={loading}
+              >
+                {loading ? "Adicionando..." : "➕ Adicionar Produto (Pode ser 0 estoque)"}
+              </button>
+              <button 
+                className="button btn-secondary" 
+                onClick={() => {
+                  // Preenche com valores de exemplo
+                  setForm({
+                    ...emptyForm(),
+                    name: "Novo Produto",
+                    sku: `PROD${Date.now()}`,
+                    price: "99.99",
+                    cost: "50.00",
+                    stock: "0",
+                    min_stock: "5"
+                  });
+                }}
+              >
+                🎯 Preencher Exemplo
+              </button>
+            </>
           )}
         </div>
         
         <div className="form-footer">
-          <small>Campos marcados com * são obrigatórios</small>
+          <small>Campos marcados com * são obrigatórios. Produtos podem ser adicionados com estoque 0!</small>
         </div>
       </div>
 
@@ -580,6 +869,11 @@ export default function Products() {
               Buscando: "{searchQuery}"
             </span>
           )}
+          {bulkStockMode && (
+            <span className="stat-item warning">
+              ⚠️ Modo massa ativo - Clique nos botões + para adicionar estoque
+            </span>
+          )}
         </div>
       </div>
 
@@ -626,6 +920,7 @@ export default function Products() {
                 {filteredAndSortedProducts().map(p => {
                   const isLowStock = p.stock <= (p.min_stock || 0) || p.stock <= 3;
                   const isOutOfStock = p.stock <= 0;
+                  const bulkQuantity = bulkStockUpdates[p.id] || 0;
                   
                   return (
                     <tr key={p.id} className={isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : ''}>
@@ -672,6 +967,52 @@ export default function Products() {
                         <div className="stock-value">
                           Valor: R$ {(p.stock * (p.cost || 0)).toFixed(2)}
                         </div>
+                        
+                        {/* Controles de estoque rápido */}
+                        {bulkStockMode ? (
+                          <div className="bulk-stock-controls-row">
+                            <div className="bulk-quantity">
+                              <button 
+                                className="bulk-btn minus"
+                                onClick={() => updateBulkStock(p.id, -1)}
+                              >
+                                -
+                              </button>
+                              <span className="bulk-number">{bulkQuantity}</span>
+                              <button 
+                                className="bulk-btn plus"
+                                onClick={() => updateBulkStock(p.id, 1)}
+                              >
+                                +
+                              </button>
+                            </div>
+                            <small>Adicionar: {bulkQuantity} unidades</small>
+                          </div>
+                        ) : (
+                          <div className="quick-stock-controls">
+                            <button 
+                              className="button btn-sm btn-success"
+                              onClick={() => quickAddStock(p.id, 1)}
+                              title="Adicionar 1 unidade"
+                            >
+                              +1
+                            </button>
+                            <button 
+                              className="button btn-sm btn-success"
+                              onClick={() => quickAddStock(p.id, 5)}
+                              title="Adicionar 5 unidades"
+                            >
+                              +5
+                            </button>
+                            <button 
+                              className="button btn-sm btn-info"
+                              onClick={() => openStockModal(p)}
+                              title="Mais opções de estoque"
+                            >
+                              📦
+                            </button>
+                          </div>
+                        )}
                       </td>
                       
                       <td className="status-cell">
@@ -682,14 +1023,14 @@ export default function Products() {
                       
                       <td className="actions-cell">
                         <div className="actions-buttons">
-                          {/* BOTÃO DE REPOR ESTOQUE ADICIONADO AQUI */}
+                          {/* Botão principal de repor estoque */}
                           <button 
-                            className="button btn-info" 
+                            className="button btn-success" 
                             onClick={() => handleRestock(p.id, p.name)}
                             disabled={loading}
                             title="Repor estoque deste produto"
                           >
-                            📦
+                            ➕ Estoque
                           </button>
                           
                           <button 
@@ -746,6 +1087,98 @@ export default function Products() {
           </div>
         </div>
       </div>
+
+      {/* Modal para adicionar estoque */}
+      {showStockModal && stockModalProduct && (
+        <div className="modal-overlay" onClick={() => setShowStockModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📦 Adicionar Estoque: {stockModalProduct.name}</h3>
+              <button className="modal-close" onClick={() => setShowStockModal(false)}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>Estoque atual: <strong>{stockModalProduct.stock}</strong> unidades</p>
+              
+              <div className="modal-stock-options">
+                <div className="modal-stock-grid">
+                  <button 
+                    className="modal-stock-option"
+                    onClick={() => {
+                      quickAddStock(stockModalProduct.id, 1);
+                      setShowStockModal(false);
+                    }}
+                  >
+                    <span className="option-icon">➕</span>
+                    <span className="option-title">+1 Unidade</span>
+                    <span className="option-desc">Estoque: {stockModalProduct.stock + 1}</span>
+                  </button>
+                  
+                  <button 
+                    className="modal-stock-option"
+                    onClick={() => {
+                      quickAddStock(stockModalProduct.id, 5);
+                      setShowStockModal(false);
+                    }}
+                  >
+                    <span className="option-icon">📦</span>
+                    <span className="option-title">+5 Unidades</span>
+                    <span className="option-desc">Estoque: {stockModalProduct.stock + 5}</span>
+                  </button>
+                  
+                  <button 
+                    className="modal-stock-option"
+                    onClick={() => {
+                      quickAddStock(stockModalProduct.id, 10);
+                      setShowStockModal(false);
+                    }}
+                  >
+                    <span className="option-icon">📊</span>
+                    <span className="option-title">+10 Unidades</span>
+                    <span className="option-desc">Estoque: {stockModalProduct.stock + 10}</span>
+                  </button>
+                  
+                  <button 
+                    className="modal-stock-option"
+                    onClick={() => {
+                      openStockModal(stockModalProduct);
+                      setShowStockModal(false);
+                    }}
+                  >
+                    <span className="option-icon">🔢</span>
+                    <span className="option-title">Quantidade Customizada</span>
+                    <span className="option-desc">Definir valor manual</span>
+                  </button>
+                </div>
+                
+                <div className="modal-custom">
+                  <input
+                    type="number"
+                    className="input"
+                    placeholder="Digite a quantidade"
+                    min="1"
+                    id="customQuantity"
+                  />
+                  <button 
+                    className="button btn-primary"
+                    onClick={() => {
+                      const input = document.getElementById('customQuantity');
+                      const quantity = parseInt(input.value) || 0;
+                      if (quantity > 0) {
+                        quickAddStock(stockModalProduct.id, quantity);
+                        setShowStockModal(false);
+                      }
+                    }}
+                  >
+                    Aplicar Quantidade
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
