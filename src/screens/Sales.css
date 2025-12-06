@@ -1,56 +1,15 @@
-/* src/screens/Sales.css */
-/* ====== SOLUÇÃO NUCLEAR - REMOVE TODOS SCROLLS INTERNOS ====== */
-/* Remove TODOS os scrolls internos da página de vendas */
-.sales-page-container * {
-  overflow: visible !important;
-}
+/* src/screens/Sales.css - VERSÃO CORRIGIDA */
 
-.sales-page-container .sales-main-content {
-  overflow-y: auto !important;
-}
-
-/* Esconde TODAS as scrollbars exceto a principal */
-.sales-page-container *::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-.sales-main-content::-webkit-scrollbar {
-  display: block !important;
-  width: 8px !important;
-  height: 8px !important;
-}
-
-.sales-main-content::-webkit-scrollbar-track {
-  background: var(--gray-100) !important;
-}
-
-.sales-main-content::-webkit-scrollbar-thumb {
-  background: var(--gray-400) !important;
-  border-radius: var(--radius-full) !important;
-}
-
-.sales-main-content::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-500) !important;
-}
-
-/* Remove quaisquer limites de altura */
-.sales-page-container div {
-  max-height: none !important;
-  min-height: auto !important;
-  height: auto !important;
-}
-
-/* ====== CSS ORIGINAL (mas simplificado) ====== */
+/* ====== CSS CORRIGIDO (sem solução nuclear) ====== */
 .sales-page-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  max-height: 100vh;
+  /* REMOVA height: 100vh e max-height: 100vh */
+  height: auto;
+  min-height: calc(100vh - 150px);
   overflow: hidden;
   background: var(--gray-50);
 }
@@ -144,8 +103,27 @@
 .sales-main-content {
   flex: 1;
   padding: 0 var(--space-md) var(--space-xl);
-  overflow-y: auto; /* APENAS SCROLL AQUI */
+  overflow-y: auto;
   position: relative;
+}
+
+/* Scrollbar personalizada apenas para sales-main-content */
+.sales-main-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sales-main-content::-webkit-scrollbar-track {
+  background: var(--gray-100);
+}
+
+.sales-main-content::-webkit-scrollbar-thumb {
+  background: var(--gray-400);
+  border-radius: var(--radius-full);
+}
+
+.sales-main-content::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-500);
 }
 
 /* Layout */
