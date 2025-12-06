@@ -1,46 +1,39 @@
-import { useContext } from "react";
-import { AuthContext } from "../auth/AuthContext";
-import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 export default function Profile() {
-  const { user, logout } = useContext(AuthContext);
+  const { user, signOut } = useAuth();
 
-  // avatar baseado no email
-  const avatar = `https://api.dicebear.com/7.x/initials/svg?seed=${user?.email}`;
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Erro ao sair:", error);
+    }
+  };
 
   return (
-    <div className="card">
-      <h2>Perfil</h2>
-
-      <img 
-        src={avatar} 
-        alt="avatar"
-        style={{
-          width: 80,
-          height: 80,
-          borderRadius: "50%",
-          marginBottom: 12
-        }}
-      />
-
-      <p><strong>E-mail:</strong> {user?.email}</p>
-
-      <div style={{ marginTop: 20 }}>
-        <Link to="/change-email">
-          <button className="button btn-primary" style={{ marginRight: 10 }}>
-            Alterar E-mail
-          </button>
-        </Link>
-
-        <Link to="/change-password">
-          <button className="button btn-primary" style={{ marginRight: 10 }}>
-            Alterar Senha
-          </button>
-        </Link>
-
-        <button className="button btn-danger" onClick={logout}>
-          Sair da Conta
-        </button>
+    <div>
+      <h2>Perfil do Usuário</h2>
+      
+      <div className="card">
+        {user ? (
+          <>
+            <p><strong>Nome:</strong> {user.user_metadata?.full_name || user.email}</p>
+            <p><strong>Email:</strong> {user.email}</p>
+            <p><strong>ID:</strong> {user.id}</p>
+            
+            <button 
+              onClick={handleLogout}
+              className="button btn-danger"
+              style={{ marginTop: "20px" }}
+            >
+              🚪 Sair da Conta
+            </button>
+          </>
+        ) : (
+          <p>Nenhum usuário logado</p>
+        )}
       </div>
     </div>
   );
