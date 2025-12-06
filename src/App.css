@@ -1,4 +1,4 @@
-/* src/App.css - Design System Profissional Completo - VERSÃO CORRIGIDA */
+/* src/App.css - Design System Profissional Completo - VERSÃO CORRIGIDA COM PULL-TO-REFRESH */
 :root {
   /* Cores principais */
   --primary: #4361ee;
@@ -70,16 +70,7 @@
   --z-toast: 600;
 }
 
-/* ====== CORREÇÕES CRÍTICAS PARA SCROLL DUPLO ====== */
-/* RESET COMPLETO - Evita múltiplos viewports */
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* ← IMPEDE SCROLL NO BODY */
-}
-
+/* ====== RESET CORRIGIDO (permite pull-to-refresh) ====== */
 * {
   margin: 0;
   padding: 0;
@@ -89,6 +80,7 @@ html, body, #root {
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  height: 100%;
 }
 
 body {
@@ -96,23 +88,26 @@ body {
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
   color: var(--gray-800);
   line-height: 1.6;
-  height: 100vh; /* ← Garante altura total */
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  position: fixed; /* ← FIXA O BODY, sem scroll */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  overflow-x: hidden; /* Apenas horizontal escondido */
+  position: relative;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ====== LAYOUT PRINCIPAL CORRIGIDO ====== */
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* ← Usa 100vh, não min-height */
+  min-height: 100vh;
   position: relative;
-  overflow: hidden; /* ← IMPEDE SCROLL NO APP */
+  width: 100%;
 }
 
 /* Header Moderno */
@@ -124,7 +119,7 @@ body {
   top: 0;
   z-index: var(--z-sticky);
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0; /* ← Impede compressão */
+  flex-shrink: 0;
 }
 
 .header-container {
@@ -239,7 +234,7 @@ body {
   padding: var(--space-md);
   animation: slideDown 0.3s ease;
   border-bottom: 3px solid var(--warning-dark);
-  flex-shrink: 0; /* ← Impede compressão */
+  flex-shrink: 0;
 }
 
 @keyframes slideDown {
@@ -280,15 +275,15 @@ body {
 
 /* ====== MAIN CONTENT CORRIGIDO ====== */
 .main {
-  flex: 1; /* ← Ocupa espaço restante */
+  flex: 1;
   padding: var(--space-xl);
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
   position: relative;
-  overflow-y: auto; /* ← APENAS AQUI TEM SCROLL */
+  overflow-y: auto;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch; /* Scroll suave no mobile */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Garante que os componentes dentro do main não tenham scroll próprio */
@@ -648,7 +643,7 @@ body {
   padding: var(--space-xl) 0;
   margin-top: auto;
   border-top: 3px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0; /* ← Impede compressão */
+  flex-shrink: 0;
 }
 
 .footer-content {
@@ -800,6 +795,17 @@ body {
   height: auto !important;
 }
 
+/* ====== CORREÇÃO PARA PULL-TO-REFRESH ====== */
+/* Habilita overscroll behavior para permitir pull-to-refresh */
+html {
+  overscroll-behavior-y: none;
+}
+
+body {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
   html {
@@ -914,7 +920,17 @@ body {
 /* Ajustes para iOS */
 @supports (-webkit-touch-callout: none) {
   input, select, textarea {
-    font-size: 16px !important; /* Evita zoom automático no iOS */
+    font-size: 16px !important;
+  }
+  
+  /* Melhora o pull-to-refresh no iOS */
+  body {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: scroll;
+  }
+  
+  .app {
+    min-height: -webkit-fill-available;
   }
 }
 
