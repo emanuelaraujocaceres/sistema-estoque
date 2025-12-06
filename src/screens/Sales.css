@@ -7,7 +7,6 @@
   flex-direction: column;
   height: 100vh;
   max-height: 100vh;
-  overflow: hidden;
   background: var(--gray-50);
 }
 
@@ -96,13 +95,11 @@
   font-weight: 700;
 }
 
-/* Área principal - ÚNICO SCROLL */
+/* ========== ÁREA PRINCIPAL - APENAS AQUI TEM SCROLL ========== */
 .sales-main-content {
   flex: 1;
-  display: flex;
-  flex-direction: column;
   padding: 0 var(--space-md) var(--space-xl);
-  overflow-y: auto; /* APENAS SCROLL PRINCIPAL */
+  overflow-y: auto; /* APENAS SCROLL AQUI */
   position: relative;
 }
 
@@ -124,11 +121,14 @@
   background: var(--gray-500);
 }
 
-/* ========== LAYOUT SIMPLIFICADO ========== */
+/* ========== LAYOUT - NENHUM SCROLL INTERNO ========== */
 .sales-layout {
   display: grid;
   grid-template-columns: 1fr 380px;
   gap: var(--space-xl);
+  /* FORÇANDO: SEM SCROLL INTERNO */
+  overflow: visible !important;
+  min-height: 0;
 }
 
 @media (max-width: 1024px) {
@@ -138,11 +138,13 @@
   }
 }
 
-/* ========== COLUNA DE PRODUTOS ========== */
+/* ========== COLUNA DE PRODUTOS - SEM SCROLL ========== */
 .products-column {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  /* FORÇANDO: SEM SCROLL */
+  overflow: visible !important;
 }
 
 .search-section {
@@ -240,14 +242,31 @@
   border-color: var(--primary);
 }
 
-/* Área dos produtos - SEM SCROLL INTERNO */
+/* Área dos produtos - SEM SCROLL */
 .products-area {
   background: white;
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--gray-200);
-  /* SEM overflow, SEM altura fixa */
+  /* FORÇANDO: SEM SCROLL */
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* REMOVENDO QUALQUER SCROLLBAR INTERNA */
+.products-area::-webkit-scrollbar,
+.products-list::-webkit-scrollbar,
+.products-content::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.products-list {
+  /* FORÇANDO: SEM SCROLL */
+  overflow: visible !important;
+  max-height: none !important;
 }
 
 /* Grid de Produtos */
@@ -443,23 +462,32 @@
   color: var(--gray-600);
 }
 
-/* ========== COLUNA DO CARRINHO - SIMPLIFICADA ========== */
+/* ========== COLUNA DO CARRINHO - SEM SCROLL ========== */
 .cart-column {
-  position: sticky;
-  top: 20px;
-  height: fit-content;
+  /* FORÇANDO: SEM SCROLL */
+  overflow: visible !important;
 }
 
-/* Seção do carrinho - SEM SCROLL INTERNO */
+/* Seção do carrinho - SEM SCROLL */
 .cart-section {
   background: white;
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--gray-200);
-  display: flex;
-  flex-direction: column;
-  /* SEM overflow, SEM altura fixa */
+  /* FORÇANDO: SEM SCROLL */
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* REMOVENDO SCROLLBARS DO CARRINHO */
+.cart-section::-webkit-scrollbar,
+.cart-content::-webkit-scrollbar,
+.cart-items-container::-webkit-scrollbar,
+.cart-items-list::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Cabeçalho do carrinho */
@@ -511,13 +539,15 @@
   font-style: italic;
 }
 
-/* Lista de Itens do Carrinho - SEM SCROLL INTERNO */
+/* Lista de Itens do Carrinho - SEM SCROLL */
 .cart-items-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
   margin-bottom: var(--space-xl);
-  /* SEM max-height, SEM overflow */
+  /* FORÇANDO: SEM SCROLL */
+  overflow: visible !important;
+  max-height: none !important;
 }
 
 .cart-item {
@@ -837,10 +867,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
-  }
-  
-  .cart-column {
-    position: static;
   }
 }
 
