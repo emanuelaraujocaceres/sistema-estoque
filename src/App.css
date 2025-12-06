@@ -1,4 +1,4 @@
-/* src/App.css - Design System Profissional Completo - VERSÃO FINAL CORRIGIDA */
+/* src/App.css - Design System Profissional Completo - VERSÃO FINAL */
 :root {
   /* Cores principais */
   --primary: #4361ee;
@@ -90,7 +90,7 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* IMPORTANTE: NÃO use overflow: hidden aqui */
+  /* IMPORTANTE: NÃO use overflow: hidden aqui - permite pull-to-refresh */
   overflow-x: hidden; /* Apenas horizontal */
 }
 
@@ -280,8 +280,6 @@ body {
   width: 100%;
   margin: 0 auto;
   position: relative;
-  /* IMPORTANTE: NÃO use overflow-y: auto aqui */
-  /* Deixe o scroll natural do body */
   overflow-x: hidden;
 }
 
@@ -776,21 +774,10 @@ body {
 .gap-4 { gap: var(--space-xl); }
 
 /* ====== CORREÇÃO PARA PULL-TO-REFRESH ====== */
-/* Habilita o scroll natural do body */
+/* Remove qualquer overflow do body que bloqueie scroll */
 body {
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
-}
-
-/* Remove qualquer overflow do .app e .main */
-.app,
-.main {
-  overflow: visible !important;
-}
-
-/* Garante que não haja scrolls duplos */
-.main > * {
-  max-height: none !important;
 }
 
 /* Responsividade */
@@ -907,15 +894,12 @@ body {
 /* Ajustes para iOS - Pull-to-refresh */
 @supports (-webkit-touch-callout: none) {
   body {
-    /* Força o pull-to-refresh no iOS */
     height: 100%;
     min-height: -webkit-fill-available;
-    overscroll-behavior-y: auto;
   }
   
   html {
     height: 100%;
-    overflow: hidden;
   }
   
   #root {
