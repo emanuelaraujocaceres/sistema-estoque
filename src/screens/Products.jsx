@@ -1,16 +1,16 @@
 ﻿import { useEffect, useState } from "react";
-import { getProducts, saveProducts, addProduct, updateProduct, deleteProduct } from "../services/storage";
+import { getProducts, addProduct, updateProduct, deleteProduct, initDefaultProducts } from "../services/storage";
 
 function emptyForm() { 
   return { 
     id: null, 
     sku: "", 
     name: "", 
-    price: 0, 
-    cost: 0, 
+    price: "", 
+    cost: "", 
     unit: "un", 
-    stock: 0, 
-    min_stock: 0 
+    stock: "", 
+    min_stock: "" 
   }; 
 }
 
@@ -20,6 +20,7 @@ export default function Products() {
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
+    initDefaultProducts();
     setList(getProducts());
   }, []);
 
@@ -27,29 +28,52 @@ export default function Products() {
     const { name, value } = e.target;
     setForm(f => ({
       ...f, 
-      [name]: ["price", "cost", "stock", "min_stock"].includes(name)
-        ? Number(value)
-        : value 
+      [name]: value
     }));
   }
 
   function handleAdd() {
     if (!form.name.trim()) return alert("Informe o nome do produto");
-    if (form.price <= 0) return alert("O preço deve ser maior que zero");
+    if (!form.price || Number(form.price) <= 0) return alert("O preço deve ser maior que zero");
 
-    const prod = { ...form, id: Date.now() };
+    const prod = { 
+      ...form, 
+      id: Date.now(),
+      price: Number(form.price) || 0,
+      cost: Number(form.cost) || 0,
+      stock: Number(form.stock) || 0,
+      min_stock: Number(form.min_stock) || 0
+    };
+    
     addProduct(prod);
     setList(getProducts());
     setForm(emptyForm());
   }
 
   function handleEdit(p) {
-    setForm(p);
+    setForm({
+      ...p,
+      price: p.price.toString(),
+      cost: p.cost.toString(),
+      stock: p.stock.toString(),
+      min_stock: p.min_stock.toString()
+    });
     setEditing(true);
   }
 
   function handleSaveEdit() {
-    updateProduct(form.id, form);
+    if (!form.name.trim()) return alert("Informe o nome do produto");
+    if (!form.price || Number(form.price) <= 0) return alert("O preço deve ser maior que zero");
+
+    const updatedProduct = {
+      ...form,
+      price: Number(form.price) || 0,
+      cost: Number(form.cost) || 0,
+      stock: Number(form.stock) || 0,
+      min_stock: Number(form.min_stock) || 0
+    };
+    
+    updateProduct(form.id, updatedProduct);
     setList(getProducts());
     setForm(emptyForm());
     setEditing(false);
@@ -61,14 +85,13 @@ export default function Products() {
   }
 
   function handleDelete(id, name) {
-    if (!confirm(`Tem certeza que deseja excluir o produto "${name}"?`)) return;
+    if (!window.confirm(`Tem certeza que deseja excluir o produto "${name}"?`)) return;
     deleteProduct(id);
     setList(getProducts());
   }
 
   return (
     <div style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto" }}>
-
       {/* FORM */}
       <div className="card" style={{ marginBottom: "20px" }}>
         <h3 style={{ marginTop: 0, marginBottom: "20px", color: "#2d3748" }}>
@@ -76,7 +99,7 @@ export default function Products() {
         </h3>
 
         <div style={{ marginBottom: "15px" }}>
-          <label style={{ fontWeight: 500 }}>Nome do Produto *</label>
+          <label style={{ fontWeight: 500, display: "block", marginBottom: "5px" }}>Nome do Produto *</label>
           <input
             className="input"
             name="name"
@@ -88,19 +111,35 @@ export default function Products() {
 
         <div className="row" style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "15px" }}>
           <div className="col" style={{ flex: "1 1 200px" }}>
-            <label>Preço de Venda (R$) *</label>
-            <input className="input" type="number" name="price" min="0" step="0.01"
-              value={form.price} onChange={handleChange} />
+            <label style={{ display: "block", marginBottom: "5px" }}>Preço de Venda (R$) *</label>
+            <input 
+              className="input" 
+              type="number" 
+              name="price" 
+              min="0" 
+              step="0.01"
+              placeholder="0,00"
+              value={form.price} 
+              onChange={handleChange} 
+            />
           </div>
 
           <div className="col" style={{ flex: "1 1 200px" }}>
-            <label>Custo (R$)</label>
-            <input className="input" type="number" name="cost" min="0" step="0.01"
-              value={form.cost} onChange={handleChange} />
+            <label style={{ display: "block", marginBottom: "5px" }}>Custo (R$)</label>
+            <input 
+              className="input" 
+              type="number" 
+              name="cost" 
+              min="0" 
+              step="0.01"
+              placeholder="0,00"
+              value={form.cost} 
+              onChange={handleChange} 
+            />
           </div>
 
           <div className="col" style={{ flex: "1 1 200px" }}>
-            <label>Unidade</label>
+            <label style={{ display: "block", marginBottom: "5px" }}>Unidade</label>
             <select className="input" name="unit" value={form.unit} onChange={handleChange}>
               <option value="un">Unidade (un)</option>
               <option value="kg">Quilo (kg)</option>
@@ -115,20 +154,40 @@ export default function Products() {
 
         <div className="row" style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
           <div className="col" style={{ flex: "1 1 200px" }}>
-            <label>Estoque Atual</label>
-            <input className="input" type="number" name="stock" min="0"
-              value={form.stock} onChange={handleChange} />
+            <label style={{ display: "block", marginBottom: "5px" }}>Estoque Atual</label>
+            <input 
+              className="input" 
+              type="number" 
+              name="stock" 
+              min="0"
+              placeholder="0"
+              value={form.stock} 
+              onChange={handleChange} 
+            />
           </div>
 
           <div className="col" style={{ flex: "1 1 200px" }}>
-            <label>Estoque Mínimo</label>
-            <input className="input" type="number" name="min_stock" min="0"
-              value={form.min_stock} onChange={handleChange} />
+            <label style={{ display: "block", marginBottom: "5px" }}>Estoque Mínimo</label>
+            <input 
+              className="input" 
+              type="number" 
+              name="min_stock" 
+              min="0"
+              placeholder="0"
+              value={form.min_stock} 
+              onChange={handleChange} 
+            />
           </div>
 
           <div className="col" style={{ flex: "1 1 200px" }}>
-            <label>Código (SKU)</label>
-            <input className="input" name="sku" value={form.sku} onChange={handleChange} />
+            <label style={{ display: "block", marginBottom: "5px" }}>Código (SKU)</label>
+            <input 
+              className="input" 
+              name="sku" 
+              placeholder="Código do produto"
+              value={form.sku} 
+              onChange={handleChange} 
+            />
           </div>
         </div>
 
@@ -175,14 +234,15 @@ export default function Products() {
                       <strong>{p.name}</strong>
                       {p.sku && <div className="small">SKU: {p.sku}</div>}
                     </td>
-                    <td>R$ {p.price.toFixed(2)}</td>
+                    <td>R$ {Number(p.price).toFixed(2)}</td>
                     <td>
                       <span style={{
                         padding: "4px 8px",
                         borderRadius: "4px",
                         background: p.stock <= p.min_stock ? "#fed7d7" : "#c6f6d5",
                         color: p.stock <= p.min_stock ? "#9b2c2c" : "#276749",
-                        fontWeight: 500
+                        fontWeight: 500,
+                        display: "inline-block"
                       }}>
                         {p.stock} {p.unit}
                       </span>
@@ -191,7 +251,7 @@ export default function Products() {
                     <td>{p.unit}</td>
                     <td>
                       <div style={{ display: "flex", gap: "6px" }}>
-                        <button className="button" onClick={() => handleEdit(p)}>Editar</button>
+                        <button className="button" onClick={() => handleEdit(p)} style={{ background: "#4299e1", color: "white" }}>Editar</button>
                         <button className="button btn-danger" onClick={() => handleDelete(p.id, p.name)}>Excluir</button>
                       </div>
                     </td>
@@ -202,7 +262,6 @@ export default function Products() {
           </div>
         )}
       </div>
-
     </div>
   );
 }
