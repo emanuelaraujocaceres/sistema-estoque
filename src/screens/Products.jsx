@@ -39,6 +39,46 @@ export default function Products() {
     }
   }, []);
 
+  // ====== FUNÇÃO SIMPLES PARA REPOR ESTOQUE ======
+  const handleRestock = (productId, productName) => {
+    const currentProduct = list.find(p => p.id === productId);
+    if (!currentProduct) return;
+    
+    const quantity = prompt(
+      `📦 Repor estoque de "${productName}"\n\n` +
+      `Estoque atual: ${currentProduct.stock} unidades\n` +
+      `Digite quantas unidades deseja ADICIONAR:`,
+      "10"
+    );
+    
+    if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
+      return; // Usuário cancelou ou valor inválido
+    }
+    
+    const addQty = parseInt(quantity);
+    
+    // Atualizar no localStorage
+    const products = getProducts();
+    const updatedProducts = products.map(p => {
+      if (p.id === productId) {
+        return {
+          ...p,
+          stock: p.stock + addQty,
+          updated_at: new Date().toISOString()
+        };
+      }
+      return p;
+    });
+    
+    localStorage.setItem('products', JSON.stringify(updatedProducts));
+    
+    // Atualizar estado
+    setList(updatedProducts);
+    
+    // Feedback visual
+    alert(`✅ ${addQty} unidades adicionadas ao estoque de "${productName}"!\n\nNovo estoque: ${currentProduct.stock + addQty} unidades`);
+  };
+
   function handleChange(e) {
     const { name, value } = e.target;
     setForm(f => ({
@@ -642,6 +682,16 @@ export default function Products() {
                       
                       <td className="actions-cell">
                         <div className="actions-buttons">
+                          {/* BOTÃO DE REPOR ESTOQUE ADICIONADO AQUI */}
+                          <button 
+                            className="button btn-info" 
+                            onClick={() => handleRestock(p.id, p.name)}
+                            disabled={loading}
+                            title="Repor estoque deste produto"
+                          >
+                            📦
+                          </button>
+                          
                           <button 
                             className="button btn-edit" 
                             onClick={() => handleEdit(p)}
