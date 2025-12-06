@@ -1,12 +1,13 @@
 /* src/screens/Sales.css - VERSÃO CORRIGIDA */
 
-/* ====== CSS CORRIGIDO ====== */
+/* ====== CSS CORRIGIDO (sem solução nuclear) ====== */
 .sales-page-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0;
   display: flex;
   flex-direction: column;
+  /* REMOVA height: 100vh e max-height: 100vh */
   height: auto;
   min-height: calc(100vh - 150px);
   overflow: hidden;
