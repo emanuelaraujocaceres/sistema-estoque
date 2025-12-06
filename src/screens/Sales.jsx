@@ -7,6 +7,8 @@ function Sales() {
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState([]);
   const [payment, setPayment] = useState("dinheiro");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Carregar produtos
   useEffect(() => {
@@ -14,141 +16,158 @@ function Sales() {
   }, []);
 
   function loadProducts() {
-    setProducts(getProducts());
+    try {
+      const loadedProducts = getProducts();
+      if (!Array.isArray(loadedProducts)) {
+        throw new Error("Dados de produtos inválidos");
+      }
+      setProducts(loadedProducts);
+      setError(null);
+    } catch (error) {
+      console.error("Erro ao carregar produtos:", error);
+      setError("Erro ao carregar produtos. Verifique o console.");
+      setProducts([]);
+    }
   }
 
   function search(q) {
-    if (!q.trim()) return [];
-    const lowerQ = q.toLowerCase();
-    return products.filter(p => 
-      p.name.toLowerCase().includes(lowerQ)
-    );
+    try {
+      if (!q || !q.trim()) return [];
+      const lowerQ = q.toLowerCase().trim();
+      return products.filter(p => 
+        p.name && p.name.toLowerCase().includes(lowerQ)
+      );
+    } catch (error) {
+      console.error("Erro na busca:", error);
+      return [];
+    }
   }
 
-  // ✅ ADICIONAR AO CARRINHO E ATUALIZAR ESTOQUE EM TEMPO REAL
+  // ✅ ADICIONAR AO CARRINHO
   function addToCart(prod) {
-    // Verificar estoque
-    if (prod.stock <= 0) {
-      alert(`❌ ${prod.name} está sem estoque!`);
-      return;
+    try {
+      if (!prod || !prod.id) {
+        throw new Error("Produto inválido");
+      }
+
+      // Verificar estoque
+      if (prod.stock <= 0) {
+        alert(`❌ ${prod.name} está sem estoque!`);
+        return;
+      }
+
+      const existingItem = cart.find(item => item.productId === prod.id);
+      const quantidadeDesejada = existingItem ? existingItem.qty + 1 : 1;
+
+      // Verificar se tem estoque suficiente
+      if (quantidadeDesejada > prod.stock) {
+        alert(`⚠️ Estoque insuficiente!\n${prod.name}: ${prod.stock} disponíveis`);
+        return;
+      }
+
+      // Atualizar carrinho
+      if (existingItem) {
+        setCart(cart.map(item =>
+          item.productId === prod.id
+            ? {
+                ...item,
+                qty: item.qty + 1,
+                subtotal: (item.qty + 1) * item.unitPrice
+              }
+            : item
+        ));
+      } else {
+        setCart([
+          ...cart,
+          {
+            productId: prod.id,
+            name: prod.name || "Produto sem nome",
+            qty: 1,
+            unitPrice: Number(prod.price) || 0,
+            subtotal: Number(prod.price) || 0
+          }
+        ]);
+      }
+
+      // Atualizar lista de produtos para refletir mudança
+      loadProducts();
+    } catch (error) {
+      console.error("Erro ao adicionar ao carrinho:", error);
+      alert("Erro ao adicionar produto ao carrinho");
     }
+  }
 
-    const existingItem = cart.find(item => item.productId === prod.id);
-    const quantidadeDesejada = existingItem ? existingItem.qty + 1 : 1;
+  // ✅ MUDAR QUANTIDADE NO CARRINHO
+  function changeQty(productId, newQty) {
+    try {
+      if (newQty < 1) {
+        removeItem(productId);
+        return;
+      }
 
-    // Verificar se tem estoque suficiente
-    if (quantidadeDesejada > prod.stock) {
-      alert(`⚠️ Estoque insuficiente!\n${prod.name}: ${prod.stock} disponíveis`);
-      return;
-    }
+      const product = getProductById(productId);
+      const item = cart.find(i => i.productId === productId);
 
-    // Atualizar carrinho
-    if (existingItem) {
+      if (!product || !item) {
+        console.warn("Produto ou item não encontrado");
+        return;
+      }
+
+      const diferenca = newQty - item.qty;
+
+      // Verificar se tem estoque suficiente para aumentar
+      if (diferenca > 0 && newQty > product.stock + item.qty) {
+        alert(`⚠️ Estoque insuficiente!\n${product.name}: ${product.stock} disponíveis`);
+        return;
+      }
+
+      // Atualizar carrinho
       setCart(cart.map(item =>
-        item.productId === prod.id
+        item.productId === productId
           ? {
               ...item,
-              qty: item.qty + 1,
-              subtotal: (item.qty + 1) * item.unitPrice
+              qty: newQty,
+              subtotal: newQty * item.unitPrice
             }
           : item
       ));
-    } else {
-      setCart([
-        ...cart,
-        {
-          productId: prod.id,
-          name: prod.name,
-          qty: 1,
-          unitPrice: Number(prod.price),
-          subtotal: Number(prod.price)
-        }
-      ]);
-    }
 
-    // ✅ ATUALIZAR ESTOQUE EM TEMPO REAL NO STORAGE
-    updateProduct(prod.id, {
-      ...prod,
-      stock: prod.stock - 1
-    });
-
-    // Atualizar lista de produtos para refletir mudança
-    loadProducts();
-  }
-
-  // ✅ MUDAR QUANTIDADE NO CARRINHO E ATUALIZAR ESTOQUE
-  function changeQty(productId, newQty) {
-    if (newQty < 1) {
-      removeItem(productId);
-      return;
-    }
-
-    const product = getProductById(productId);
-    const item = cart.find(i => i.productId === productId);
-
-    if (!product || !item) return;
-
-    const diferenca = newQty - item.qty;
-
-    // Verificar se tem estoque suficiente para aumentar
-    if (diferenca > 0 && newQty > product.stock + item.qty) {
-      alert(`⚠️ Estoque insuficiente!\n${product.name}: ${product.stock} disponíveis`);
-      return;
-    }
-
-    // Atualizar carrinho
-    setCart(cart.map(item =>
-      item.productId === productId
-        ? {
-            ...item,
-            qty: newQty,
-            subtotal: newQty * item.unitPrice
-          }
-        : item
-    ));
-
-    // ✅ ATUALIZAR ESTOQUE EM TEMPO REAL
-    if (diferenca !== 0) {
-      updateProduct(productId, {
-        ...product,
-        stock: product.stock - diferenca
-      });
-      loadProducts();
+    } catch (error) {
+      console.error("Erro ao alterar quantidade:", error);
+      alert("Erro ao alterar quantidade do produto");
     }
   }
 
-  // ✅ REMOVER ITEM DO CARRINHO E DEVOLVER ESTOQUE
+  // ✅ REMOVER ITEM DO CARRINHO
   function removeItem(productId) {
-    const item = cart.find(i => i.productId === productId);
-    if (!item) return;
+    try {
+      const item = cart.find(i => i.productId === productId);
+      if (!item) return;
 
-    const product = getProductById(productId);
-    if (product) {
-      // ✅ DEVOLVER ESTOQUE
-      updateProduct(productId, {
-        ...product,
-        stock: product.stock + item.qty
-      });
+      // Remover do carrinho
+      setCart(cart.filter(i => i.productId !== productId));
+      
+    } catch (error) {
+      console.error("Erro ao remover item:", error);
+      alert("Erro ao remover produto do carrinho");
     }
-
-    // Remover do carrinho
-    setCart(cart.filter(i => i.productId !== productId));
-    loadProducts();
   }
 
   // ✅ FINALIZAR VENDA
   async function finalize() {
-    if (cart.length === 0) {
-      alert("🛒 Carrinho vazio!");
-      return;
-    }
-
-    const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
-    const confirmMessage = `Confirmar venda?\n\nItens: ${cart.length}\nTotal: R$ ${total.toFixed(2)}\nPagamento: ${payment}`;
-
-    if (!window.confirm(confirmMessage)) return;
-
     try {
+      if (cart.length === 0) {
+        alert("🛒 Carrinho vazio!");
+        return;
+      }
+
+      const total = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+      const confirmMessage = `Confirmar venda?\n\nItens: ${cart.length}\nTotal: R$ ${total.toFixed(2)}\nPagamento: ${payment}`;
+
+      if (!window.confirm(confirmMessage)) return;
+
+      setLoading(true);
+
       const saleData = {
         items: cart.map(item => ({
           productId: item.productId,
@@ -162,26 +181,46 @@ function Sales() {
       };
 
       // makeSale já atualiza o estoque automaticamente
-      makeSale(saleData);
+      const newSale = await makeSale(saleData);
 
       // Feedback
-      alert(`✅ Venda realizada!\nTotal: R$ ${total.toFixed(2)}`);
+      alert(`✅ Venda realizada com sucesso!\nCódigo: ${newSale.id}\nTotal: R$ ${total.toFixed(2)}`);
 
       // Limpar carrinho
       setCart([]);
       loadProducts();
 
     } catch (error) {
-      alert(`❌ Erro ao finalizar venda: ${error.message}`);
-      console.error("Erro na venda:", error);
+      console.error("Erro ao finalizar venda:", error);
+      alert(`❌ Erro ao finalizar venda: ${error.message || "Erro desconhecido"}`);
+    } finally {
+      setLoading(false);
     }
   }
 
   // Calcular total
-  const totalVenda = cart.reduce((sum, item) => sum + item.subtotal, 0);
+  const totalVenda = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+
+  // Limpar carrinho
+  function clearCart() {
+    if (cart.length === 0) return;
+    
+    if (window.confirm(`Limpar carrinho com ${cart.length} itens?`)) {
+      setCart([]);
+    }
+  }
 
   return (
     <div className="sales-container">
+      {error && (
+        <div className="error-banner">
+          <span>⚠️ {error}</span>
+          <button onClick={loadProducts} className="button btn-sm btn-secondary">
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
       {/* BUSCA DE PRODUTOS */}
       <div className="card search-section">
         <h2>🛒 Vender</h2>
@@ -192,26 +231,40 @@ function Sales() {
             placeholder="Buscar produto por nome..."
             value={query}
             onChange={e => setQuery(e.target.value)}
+            disabled={loading}
           />
-          <button className="button btn-secondary" onClick={() => setQuery("")}>
-            Limpar
-          </button>
+          <div className="search-controls">
+            <button 
+              className="button btn-secondary" 
+              onClick={() => setQuery("")}
+              disabled={!query.trim()}
+            >
+              Limpar
+            </button>
+            <button 
+              className="button btn-secondary" 
+              onClick={loadProducts}
+              disabled={loading}
+            >
+              {loading ? "Carregando..." : "🔄 Atualizar"}
+            </button>
+          </div>
         </div>
 
         <div className="products-grid">
           {search(query).map(product => (
             <div key={product.id} className="product-card">
               <div className="product-info">
-                <h4>{product.name}</h4>
-                <div className="product-price">R$ {Number(product.price).toFixed(2)}</div>
+                <h4>{product.name || "Produto sem nome"}</h4>
+                <div className="product-price">R$ {Number(product.price || 0).toFixed(2)}</div>
                 <div className={`product-stock ${product.stock <= 0 ? 'stock-out' : product.stock <= (product.min_stock || 3) ? 'stock-low' : 'stock-ok'}`}>
-                  📦 Estoque: {product.stock}
+                  📦 Estoque: {product.stock || 0}
                 </div>
               </div>
               <button
                 className="button btn-primary"
                 onClick={() => addToCart(product)}
-                disabled={product.stock <= 0}
+                disabled={product.stock <= 0 || loading}
               >
                 {product.stock <= 0 ? 'Sem Estoque' : '➕ Adicionar'}
               </button>
@@ -223,12 +276,29 @@ function Sales() {
               🔍 Nenhum produto encontrado para "{query}"
             </div>
           )}
+          
+          {!query && products.length === 0 && (
+            <div className="no-results">
+              📦 Nenhum produto cadastrado. Vá para a página de Estoque para adicionar produtos.
+            </div>
+          )}
         </div>
       </div>
 
       {/* CARRINHO */}
       <div className="card cart-section">
-        <h2>🛍️ Carrinho ({cart.length} {cart.length === 1 ? 'item' : 'itens'})</h2>
+        <div className="cart-header">
+          <h2>🛍️ Carrinho ({cart.length} {cart.length === 1 ? 'item' : 'itens'})</h2>
+          {cart.length > 0 && (
+            <button 
+              className="button btn-danger btn-sm" 
+              onClick={clearCart}
+              disabled={loading}
+            >
+              🗑️ Limpar Carrinho
+            </button>
+          )}
+        </div>
         
         {cart.length === 0 ? (
           <div className="empty-cart">
@@ -249,7 +319,7 @@ function Sales() {
                       <div className="cart-item-name">{item.name}</div>
                       <div className="cart-item-details">
                         R$ {item.unitPrice.toFixed(2)}/un • 
-                        Estoque: {estoqueDisponivel + item.qty} (disponível: {estoqueDisponivel})
+                        Estoque disponível: {estoqueDisponivel}
                       </div>
                     </div>
                     
@@ -257,6 +327,7 @@ function Sales() {
                       <button
                         className="quantity-btn"
                         onClick={() => changeQty(item.productId, item.qty - 1)}
+                        disabled={loading}
                       >
                         −
                       </button>
@@ -266,7 +337,7 @@ function Sales() {
                       <button
                         className="quantity-btn"
                         onClick={() => changeQty(item.productId, item.qty + 1)}
-                        disabled={estoqueDisponivel <= 0}
+                        disabled={estoqueDisponivel <= 0 || loading}
                       >
                         +
                       </button>
@@ -280,6 +351,7 @@ function Sales() {
                       className="remove-btn"
                       onClick={() => removeItem(item.productId)}
                       title="Remover do carrinho"
+                      disabled={loading}
                     >
                       🗑️
                     </button>
@@ -295,6 +367,7 @@ function Sales() {
                   className="payment-select"
                   value={payment}
                   onChange={e => setPayment(e.target.value)}
+                  disabled={loading}
                 >
                   <option value="dinheiro">💵 Dinheiro</option>
                   <option value="pix">🏦 PIX</option>
@@ -308,12 +381,23 @@ function Sales() {
                 <div className="total-amount">R$ {totalVenda.toFixed(2)}</div>
               </div>
               
-              <button
-                className="button btn-success checkout-btn"
-                onClick={finalize}
-              >
-                ✅ Finalizar Venda
-              </button>
+              <div className="checkout-actions">
+                <button
+                  className="button btn-success checkout-btn"
+                  onClick={finalize}
+                  disabled={loading || cart.length === 0}
+                >
+                  {loading ? "Processando..." : "✅ Finalizar Venda"}
+                </button>
+                
+                <button
+                  className="button btn-secondary checkout-btn"
+                  onClick={clearCart}
+                  disabled={loading || cart.length === 0}
+                >
+                  ❌ Cancelar Venda
+                </button>
+              </div>
             </div>
           </>
         )}
