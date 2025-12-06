@@ -1,20 +1,17 @@
 ﻿import { useEffect, useState } from "react";
 import { getProducts, makeSale, getProductById } from "../services/storage";
-import { useStock } from '../hooks/useStock';
 import "./Sales.css";
 
 function Sales() {
+  const [products, setProducts] = useState([]);
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState([]);
   const [payment, setPayment] = useState("dinheiro");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
-  
-  // USAR O HOOK useStock PARA GERENCIAR PRODUTOS E ESTOQUE
-  const { products, addToCart: addToCartHook, updateStock } = useStock();
 
-  // Carregar produtos do hook useStock
+  // Carregar produtos
   useEffect(() => {
     loadProducts();
   }, []);
@@ -22,11 +19,16 @@ function Sales() {
   function loadProducts() {
     try {
       setLoading(true);
-      // Os produtos já estão disponíveis através do hook useStock
+      const loadedProducts = getProducts();
+      if (!Array.isArray(loadedProducts)) {
+        throw new Error("Dados de produtos inválidos");
+      }
+      setProducts(loadedProducts);
       setError(null);
     } catch (error) {
       console.error("Erro ao carregar produtos:", error);
       setError("Erro ao carregar produtos. Verifique o console.");
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -44,21 +46,21 @@ function Sales() {
       return products.filter(product => {
         // Filtro por busca
         const matchesSearch = !query.trim() || 
-          (product.nome && product.nome.toLowerCase().includes(lowerQuery)) ||
-          (product.codigo && product.codigo.toLowerCase().includes(lowerQuery));
+          (product.name && product.name.toLowerCase().includes(lowerQuery)) ||
+          (product.sku && product.sku.toLowerCase().includes(lowerQuery));
         
         // Filtro por categoria (status de estoque)
         let matchesCategory = true;
         if (selectedCategory !== "all") {
           switch (selectedCategory) {
             case "in_stock":
-              matchesCategory = product.estoque > 0;
+              matchesCategory = product.stock > 0;
               break;
             case "low_stock":
-              matchesCategory = product.estoque > 0 && product.estoque <= (product.minEstoque || 3);
+              matchesCategory = product.stock > 0 && product.stock <= (product.min_stock || 3);
               break;
             case "out_of_stock":
-              matchesCategory = product.estoque <= 0;
+              matchesCategory = product.stock <= 0;
               break;
           }
         }
@@ -71,7 +73,7 @@ function Sales() {
     }
   }
 
-  // ✅ ADICIONAR AO CARRINHO (ATUALIZA ESTOQUE AUTOMATICAMENTE)
+  // ✅ ADICIONAR AO CARRINHO
   function addToCart(product) {
     try {
       if (!product || !product.id) {
@@ -79,42 +81,42 @@ function Sales() {
       }
 
       // Verificar estoque
-      if (product.estoque <= 0) {
-        alert(`❌ ${product.nome} está sem estoque!`);
+      if (product.stock <= 0) {
+        alert(`❌ ${product.name} está sem estoque!`);
         return;
       }
 
-      // USAR O HOOK addToCart que atualiza estoque automaticamente
-      const success = addToCartHook(product.id);
-      
-      if (success) {
-        // Atualizar carrinho local
-        const existingItem = cart.find(item => item.productId === product.id);
-        
-        if (existingItem) {
-          setCart(cart.map(item =>
-            item.productId === product.id
-              ? {
-                  ...item,
-                  qty: item.qty + 1,
-                  subtotal: (item.qty + 1) * item.unitPrice
-                }
-              : item
-          ));
-        } else {
-          setCart([
-            ...cart,
-            {
-              productId: product.id,
-              name: product.nome || "Produto sem nome",
-              qty: 1,
-              unitPrice: Number(product.preco) || 0,
-              subtotal: Number(product.preco) || 0
-            }
-          ]);
-        }
+      const existingItem = cart.find(item => item.productId === product.id);
+      const quantidadeDesejada = existingItem ? existingItem.qty + 1 : 1;
+
+      // Verificar se tem estoque suficiente
+      if (quantidadeDesejada > product.stock) {
+        alert(`⚠️ Estoque insuficiente!\n${product.name}: ${product.stock} disponíveis`);
+        return;
+      }
+
+      // Atualizar carrinho
+      if (existingItem) {
+        setCart(cart.map(item =>
+          item.productId === product.id
+            ? {
+                ...item,
+                qty: item.qty + 1,
+                subtotal: (item.qty + 1) * item.unitPrice
+              }
+            : item
+        ));
       } else {
-        alert("Não foi possível adicionar o produto ao carrinho");
+        setCart([
+          ...cart,
+          {
+            productId: product.id,
+            name: product.name || "Produto sem nome",
+            qty: 1,
+            unitPrice: Number(product.price) || 0,
+            subtotal: Number(product.price) || 0
+          }
+        ]);
       }
 
     } catch (error) {
@@ -123,7 +125,7 @@ function Sales() {
     }
   }
 
-  // ✅ MUDAR QUANTIDADE NO CARRINHO (ATUALIZA ESTOQUE AUTOMATICAMENTE)
+  // ✅ MUDAR QUANTIDADE NO CARRINHO
   function changeQty(productId, newQty) {
     try {
       if (newQty < 1) {
@@ -131,7 +133,7 @@ function Sales() {
         return;
       }
 
-      const product = products.find(p => p.id === productId);
+      const product = getProductById(productId);
       const item = cart.find(i => i.productId === productId);
 
       if (!product || !item) {
@@ -142,33 +144,12 @@ function Sales() {
       const diferenca = newQty - item.qty;
 
       // Verificar se tem estoque suficiente para aumentar
-      if (diferenca > 0 && newQty > product.estoque + item.qty) {
-        alert(`⚠️ Estoque insuficiente!\n${product.nome}: ${product.estoque} disponíveis`);
+      if (diferenca > 0 && newQty > product.stock + item.qty) {
+        alert(`⚠️ Estoque insuficiente!\n${product.name}: ${product.stock} disponíveis`);
         return;
       }
 
-      // Atualizar estoque usando o hook
-      if (diferenca !== 0) {
-        updateStock(productId, -diferenca); // Negativo para diminuir estoque
-        
-        // Atualizar carrinho no localStorage se estiver aumentando
-        if (diferenca > 0) {
-          const cartStorage = JSON.parse(localStorage.getItem('cart') || '[]');
-          const existing = cartStorage.find(i => i.id === productId);
-          
-          if (existing) {
-            existing.quantidade += diferenca;
-          } else {
-            cartStorage.push({ 
-              ...product, 
-              quantidade: diferenca 
-            });
-          }
-          localStorage.setItem('cart', JSON.stringify(cartStorage));
-        }
-      }
-
-      // Atualizar carrinho local
+      // Atualizar carrinho
       setCart(cart.map(item =>
         item.productId === productId
           ? {
@@ -185,21 +166,13 @@ function Sales() {
     }
   }
 
-  // ✅ REMOVER ITEM DO CARRINHO (DEVOLVE ESTOQUE)
+  // ✅ REMOVER ITEM DO CARRINHO
   function removeItem(productId) {
     try {
       const item = cart.find(i => i.productId === productId);
       if (!item) return;
 
-      // DEVOLVER ESTOQUE ao remover do carrinho
-      updateStock(productId, item.qty); // Positivo para aumentar estoque
-      
-      // Remover do carrinho no localStorage
-      const cartStorage = JSON.parse(localStorage.getItem('cart') || '[]');
-      const newCartStorage = cartStorage.filter(i => i.id !== productId);
-      localStorage.setItem('cart', JSON.stringify(newCartStorage));
-
-      // Remover do carrinho local
+      // Remover do carrinho
       setCart(cart.filter(i => i.productId !== productId));
       
     } catch (error) {
@@ -235,19 +208,14 @@ function Sales() {
         paymentMethod: payment
       };
 
-      // Registrar venda no sistema de storage
+      // makeSale já atualiza o estoque automaticamente
       const newSale = await makeSale(saleData);
 
       // Feedback
       alert(`✅ Venda realizada com sucesso!\nCódigo: ${newSale.id}\nTotal: R$ ${total.toFixed(2)}`);
 
-      // Limpar carrinho (o estoque JÁ foi atualizado pelo hook addToCart)
+      // Limpar carrinho
       setCart([]);
-      
-      // Limpar carrinho do localStorage
-      localStorage.removeItem('cart');
-      
-      // Recarregar produtos para atualizar a interface
       loadProducts();
 
     } catch (error) {
@@ -258,20 +226,11 @@ function Sales() {
     }
   }
 
-  // Limpar carrinho (DEVOLVE TODO O ESTOQUE)
+  // Limpar carrinho
   function clearCart() {
     if (cart.length === 0) return;
     
-    if (window.confirm(`Limpar carrinho com ${cart.length} itens?\nO estoque será devolvido.`)) {
-      // Devolver estoque de todos os itens
-      cart.forEach(item => {
-        updateStock(item.productId, item.qty); // Devolve estoque
-      });
-      
-      // Limpar carrinho do localStorage
-      localStorage.removeItem('cart');
-      
-      // Limpar carrinho local
+    if (window.confirm(`Limpar carrinho com ${cart.length} itens?`)) {
       setCart([]);
     }
   }
@@ -279,11 +238,11 @@ function Sales() {
   // Calcular total
   const totalVenda = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
   
-  // Estatísticas - usar products do hook
+  // Estatísticas
   const filteredProducts = searchProducts();
-  const productsInStock = products.filter(p => p.estoque > 0).length;
-  const productsLowStock = products.filter(p => p.estoque > 0 && p.estoque <= (p.minEstoque || 3)).length;
-  const productsOutOfStock = products.filter(p => p.estoque <= 0).length;
+  const productsInStock = products.filter(p => p.stock > 0).length;
+  const productsLowStock = products.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 3)).length;
+  const productsOutOfStock = products.filter(p => p.stock <= 0).length;
 
   return (
     <div className="sales-container">
@@ -302,21 +261,15 @@ function Sales() {
         <div className="header-stats">
           <div className="stat-item">
             <span className="stat-label">Produtos em estoque:</span>
-            <span className="stat-value" style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)'}}>
-              {productsInStock}
-            </span>
+            <span className="stat-value">{productsInStock}</span>
           </div>
           <div className="stat-item warning">
             <span className="stat-label">Estoque baixo:</span>
-            <span className="stat-value" style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)'}}>
-              {productsLowStock}
-            </span>
+            <span className="stat-value">{productsLowStock}</span>
           </div>
           <div className="stat-item danger">
             <span className="stat-label">Sem estoque:</span>
-            <span className="stat-value" style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)'}}>
-              {productsOutOfStock}
-            </span>
+            <span className="stat-value">{productsOutOfStock}</span>
           </div>
         </div>
       </div>
@@ -325,7 +278,7 @@ function Sales() {
         {/* COLUNA ESQUERDA: PRODUTOS */}
         <div className="products-column">
           <div className="card search-section">
-            <h2 style={{color: '#1f2937'}}>🛒 Selecionar Produtos</h2>
+            <h2>🛒 Selecionar Produtos</h2>
             
             <div className="search-controls">
               <div className="search-box">
@@ -335,7 +288,6 @@ function Sales() {
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   disabled={loading}
-                  style={{color: '#1f2937'}}
                 />
                 {query && (
                   <button 
@@ -386,8 +338,8 @@ function Sales() {
               ) : filteredProducts.length === 0 ? (
                 <div className="no-products">
                   <div className="no-products-icon">📦</div>
-                  <h3 style={{color: '#374151'}}>Nenhum produto encontrado</h3>
-                  <p style={{color: '#6b7280'}}>
+                  <h3>Nenhum produto encontrado</h3>
+                  <p>
                     {query 
                       ? `Nenhum produto corresponde a "${query}"`
                       : selectedCategory !== "all"
@@ -407,65 +359,39 @@ function Sales() {
               ) : (
                 <div className="products-grid">
                   {filteredProducts.map(product => {
-                    const isLowStock = product.estoque > 0 && product.estoque <= (product.minEstoque || 3);
-                    const isOutOfStock = product.estoque <= 0;
-                    const statusText = isOutOfStock ? 'Sem Estoque' : isLowStock ? 'Estoque Baixo' : 'Em Estoque';
-                    const statusColor = isOutOfStock ? '#dc2626' : isLowStock ? '#d97706' : '#059669';
+                    const isLowStock = product.stock > 0 && product.stock <= (product.min_stock || 3);
+                    const isOutOfStock = product.stock <= 0;
                     
                     return (
                       <div 
                         key={product.id} 
                         className={`product-card ${isOutOfStock ? "out-of-stock" : isLowStock ? "low-stock" : ""}`}
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.98)',
-                          border: '2px solid var(--gray-200)'
-                        }}
                       >
                         <div className="product-header">
-                          <h4 
-                            className="product-name"
-                            style={{color: '#111827', textShadow: '0 1px 2px rgba(255, 255, 255, 0.9)'}}
-                          >
-                            {product.nome}
-                          </h4>
-                          {product.codigo && (
-                            <span className="product-sku">{product.codigo}</span>
+                          <h4 className="product-name">{product.name}</h4>
+                          {product.sku && (
+                            <span className="product-sku">{product.sku}</span>
                           )}
                         </div>
                         
-                        <div 
-                          className="product-price"
-                          style={{color: '#1f2937', fontWeight: '900', textShadow: '0 2px 4px rgba(255, 255, 255, 0.8)'}}
-                        >
-                          R$ {Number(product.preco || 0).toFixed(2)}
+                        <div className="product-price">
+                          R$ {Number(product.price || 0).toFixed(2)}
                         </div>
                         
                         <div className={`product-stock ${isOutOfStock ? "stock-out" : isLowStock ? "stock-low" : "stock-ok"}`}>
-                          <span className="stock-icon">
-                            {isOutOfStock ? '❌' : isLowStock ? '⚠️' : '✅'}
-                          </span>
-                          <span 
-                            className="stock-qty"
-                            style={{fontWeight: '700', color: statusColor}}
-                          >
-                            {product.estoque || 0}
-                          </span>
+                          <span className="stock-icon">📦</span>
+                          <span className="stock-qty">{product.stock || 0}</span>
                           <span className="stock-label">unidades</span>
-                          {product.minEstoque > 0 && (
-                            <span className="min-stock">Mín: {product.minEstoque}</span>
+                          {product.min_stock > 0 && (
+                            <span className="min-stock">Mín: {product.min_stock}</span>
                           )}
                         </div>
                         
-                        <div style={{marginTop: 'var(--space-sm)', fontSize: '0.9rem', color: statusColor, fontWeight: '600'}}>
-                          {statusText}
-                        </div>
-                        
                         <button
-                          className={`button btn-primary add-to-cart-btn ${isOutOfStock ? 'disabled' : ''}`}
+                          className="button btn-primary add-to-cart-btn"
                           onClick={() => addToCart(product)}
                           disabled={isOutOfStock || loading}
                           title={isOutOfStock ? "Produto sem estoque" : "Adicionar ao carrinho"}
-                          style={{marginTop: 'var(--space-md)'}}
                         >
                           {isOutOfStock ? "Sem Estoque" : "➕ Adicionar"}
                         </button>
@@ -477,7 +403,7 @@ function Sales() {
             </div>
             
             <div className="products-footer">
-              <span className="products-count" style={{color: '#4b5563'}}>
+              <span className="products-count">
                 Mostrando {filteredProducts.length} de {products.length} produtos
               </span>
               <button 
@@ -495,7 +421,7 @@ function Sales() {
         <div className="cart-column">
           <div className="card cart-section">
             <div className="cart-header">
-              <h2 style={{color: '#1f2937'}}>🛍️ Carrinho de Compras</h2>
+              <h2>🛍️ Carrinho de Compras</h2>
               {cart.length > 0 && (
                 <button 
                   className="button btn-danger btn-sm" 
@@ -510,8 +436,8 @@ function Sales() {
             {cart.length === 0 ? (
               <div className="empty-cart">
                 <div className="cart-icon">🛒</div>
-                <h3 style={{color: '#374151'}}>Carrinho vazio</h3>
-                <p style={{color: '#6b7280'}}>Adicione produtos para começar uma venda</p>
+                <h3>Carrinho vazio</h3>
+                <p>Adicione produtos para começar uma venda</p>
                 <p className="cart-hint">
                   Procure produtos à esquerda e clique em "Adicionar"
                 </p>
@@ -521,25 +447,17 @@ function Sales() {
                 {/* LISTA DE ITENS NO CARRINHO */}
                 <div className="cart-items-list">
                   {cart.map(item => {
-                    const product = products.find(p => p.id === item.productId);
-                    const estoqueDisponivel = product?.estoque || 0;
-                    const isLowStock = product?.estoque > 0 && product?.estoque <= (product?.minEstoque || 3);
+                    const product = getProductById(item.productId);
+                    const estoqueDisponivel = product?.stock || 0;
+                    const isLowStock = product?.stock > 0 && product?.stock <= (product?.min_stock || 3);
                     
                     return (
                       <div key={item.productId} className="cart-item">
                         <div className="cart-item-main">
                           <div className="cart-item-info">
-                            <h4 
-                              className="item-name"
-                              style={{color: '#111827', fontWeight: '600'}}
-                            >
-                              {item.name}
-                            </h4>
+                            <h4 className="item-name">{item.name}</h4>
                             <div className="item-details">
-                              <span 
-                                className="item-price"
-                                style={{color: '#4361ee', fontWeight: '500'}}
-                              >
+                              <span className="item-price">
                                 R$ {item.unitPrice.toFixed(2)}/un
                               </span>
                               <span className="item-stock">
@@ -558,12 +476,7 @@ function Sales() {
                               −
                             </button>
                             
-                            <span 
-                              className="quantity-display"
-                              style={{color: '#1f2937', fontWeight: '700'}}
-                            >
-                              {item.qty}
-                            </span>
+                            <span className="quantity-display">{item.qty}</span>
                             
                             <button
                               className="quantity-btn increase"
@@ -577,13 +490,8 @@ function Sales() {
                         </div>
                         
                         <div className="cart-item-footer">
-                          <div 
-                            className="item-subtotal"
-                            style={{color: '#374151'}}
-                          >
-                            Subtotal: <strong style={{color: '#4361ee', fontSize: '1.1rem'}}>
-                              R$ {item.subtotal.toFixed(2)}
-                            </strong>
+                          <div className="item-subtotal">
+                            Subtotal: <strong>R$ {item.subtotal.toFixed(2)}</strong>
                           </div>
                           
                           <button
@@ -606,23 +514,22 @@ function Sales() {
                     <h3>Resumo da Venda</h3>
                     
                     <div className="summary-row">
-                      <span style={{color: '#4b5563'}}>Itens no carrinho:</span>
-                      <span style={{color: '#1f2937', fontWeight: '600'}}>{cart.length}</span>
+                      <span>Itens no carrinho:</span>
+                      <span>{cart.length}</span>
                     </div>
                     
                     <div className="summary-row">
-                      <span style={{color: '#4b5563'}}>Total parcial:</span>
-                      <span style={{color: '#1f2937', fontWeight: '600'}}>R$ {totalVenda.toFixed(2)}</span>
+                      <span>Total parcial:</span>
+                      <span>R$ {totalVenda.toFixed(2)}</span>
                     </div>
                     
                     <div className="payment-method">
-                      <label style={{color: '#374151', fontWeight: '600'}}>💳 Forma de Pagamento:</label>
+                      <label>💳 Forma de Pagamento:</label>
                       <select
                         className="payment-select"
                         value={payment}
                         onChange={e => setPayment(e.target.value)}
                         disabled={loading}
-                        style={{color: '#1f2937'}}
                       >
                         <option value="dinheiro">💵 Dinheiro</option>
                         <option value="pix">🏦 PIX</option>
@@ -633,13 +540,8 @@ function Sales() {
                   </div>
                   
                   <div className="total-section">
-                    <div className="total-label" style={{color: '#374151'}}>💰 Total da Venda:</div>
-                    <div 
-                      className="total-amount"
-                      style={{color: '#1f2937', textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'}}
-                    >
-                      R$ {totalVenda.toFixed(2)}
-                    </div>
+                    <div className="total-label">💰 Total da Venda:</div>
+                    <div className="total-amount">R$ {totalVenda.toFixed(2)}</div>
                   </div>
                   
                   <div className="checkout-actions">
@@ -661,7 +563,7 @@ function Sales() {
                   </div>
                   
                   <div className="checkout-note">
-                    <p style={{color: '#6b7280'}}>⚠️ Após finalizar, a venda será registrada e o estoque será atualizado automaticamente.</p>
+                    <p>⚠️ Após finalizar, a venda será registrada e o estoque será atualizado automaticamente.</p>
                   </div>
                 </div>
               </>

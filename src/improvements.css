@@ -1,0 +1,43 @@
+﻿/* improvements.css - Melhorias sem quebrar nada */
+
+/* Melhor contraste */
+.product-name, .produto-nome {
+  color: #1a1a1a !important;
+  font-weight: 600 !important;
+}
+
+.product-price, .total-amount {
+  color: #000 !important;
+  font-weight: 700 !important;
+}
+
+/* Evitar overflow */
+body, #root {
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+}
+
+/* Classes para estoque */
+.stock-counter {
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.stock-low {
+  color: orange;
+}
+
+.stock-out {
+  color: red;
+}
+
+/* Para mobile */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px !important;
+  }
+  
+  .card {
+    margin: 10px 0 !important;
+  }
+}
