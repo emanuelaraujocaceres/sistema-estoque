@@ -1,81 +1,58 @@
-﻿const KEY_PRODUCTS = "@app_products_v1";
-const KEY_SALES = "@app_sales_v1";
+const STORAGE_KEY = 'products_app_data';
 
-function read(key, fallback = []) {
+export function getProducts() {
   try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Erro ao buscar produtos:', error);
+    return [];
   }
 }
 
-function write(key, data) {
-  localStorage.setItem(key, JSON.stringify(data));
-}
-
-/* Products API */
-export function getProducts() {
-  return read(KEY_PRODUCTS, []);
-}
-
-export function saveProducts(list) {
-  write(KEY_PRODUCTS, list);
+export function saveProducts(products) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+    return true;
+  } catch (error) {
+    console.error('Erro ao salvar produtos:', error);
+    return false;
+  }
 }
 
 export function addProduct(product) {
-  const list = getProducts();
-  list.push(product);
-  saveProducts(list);
+  const products = getProducts();
+  products.push(product);
+  saveProducts(products);
+  return product;
 }
 
-export function updateProduct(id, updates) {
-  const list = getProducts();
-  const idx = list.findIndex(p => p.id === id);
-  if (idx === -1) return false;
-  list[idx] = { ...list[idx], ...updates };
-  saveProducts(list);
-  return true;
+export function updateProduct(id, updatedProduct) {
+  const products = getProducts();
+  const index = products.findIndex(p => p.id === id);
+  if (index !== -1) {
+    products[index] = { ...products[index], ...updatedProduct };
+    saveProducts(products);
+    return true;
+  }
+  return false;
 }
 
 export function deleteProduct(id) {
-  let list = getProducts();
-  list = list.filter(p => p.id !== id);
-  saveProducts(list);
-}
-
-/* Sales API */
-export function getSales() {
-  return read(KEY_SALES, []);
-}
-
-export function saveSales(list) {
-  write(KEY_SALES, list);
-}
-
-export function makeSale(items, total, paymentType = "dinheiro") {
   const products = getProducts();
-  for (const it of items) {
-    const p = products.find(x => x.id === it.productId);
-    if (!p) throw new Error(`Produto não encontrado: ${it.name}`);
-    if (p.stock < it.qty) throw new Error(`Estoque insuficiente para ${p.name}`);
-  }
-  for (const it of items) {
-    const idx = products.findIndex(x => x.id === it.productId);
-    products[idx].stock = products[idx].stock - it.qty;
-  }
-  saveProducts(products);
+  const filtered = products.filter(p => p.id !== id);
+  saveProducts(filtered);
+  return true;
+}
 
-  const sales = getSales();
-  const sale = {
-    id: Date.now(),
-    created_at: new Date().toISOString(),
-    items,
-    total,
-    paymentType
-  };
-  sales.push(sale);
-  saveSales(sales);
-  return sale;
+export function initDefaultProducts() {
+  const current = getProducts();
+  if (current.length === 0) {
+    const defaultProducts = [
+      { id: 1, sku: "CAFE001", name: "Café", price: 50.00, cost: 35.00, unit: "kg", stock: 9, min_stock: 3 },
+      { id: 2, sku: "COCA001", name: "Coca 350", price: 5.00, cost: 3.50, unit: "un", stock: 9, min_stock: 3 },
+      { id: 3, sku: "GAS001", name: "Gasolina", price: 50.00, cost: 45.00, unit: "lt", stock: 12, min_stock: 3 }
+    ];
+    saveProducts(defaultProducts);
+  }
 }

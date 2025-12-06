@@ -4,6 +4,7 @@ import Products from "./screens/Products";
 import Sales from "./screens/Sales";
 import Reports from "./screens/Reports";
 import Login from "./screens/Login";
+import Profile from "./screens/Profile";   // Tela Profile
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./App.css";
@@ -16,6 +17,7 @@ export default function App() {
           <header className="header">
             <h1>Sistema Estoque & Caixa</h1>
             <nav>
+              <Link to="/profile">Perfil</Link>
               <Link to="/">Home</Link>
               <Link to="/products">Estoque</Link>
               <Link to="/sales">Caixa</Link>
@@ -26,10 +28,51 @@ export default function App() {
           <main className="main">
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-              <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/products"
+                element={
+                  <ProtectedRoute>
+                    <Products />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/sales"
+                element={
+                  <ProtectedRoute>
+                    <Sales />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/reports"
+                element={
+                  <ProtectedRoute>
+                    <Reports />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </main>
         </div>
