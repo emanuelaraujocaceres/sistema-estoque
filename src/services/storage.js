@@ -56,3 +56,50 @@ export function initDefaultProducts() {
     saveProducts(defaultProducts);
   }
 }
+
+// ================================================
+// FUNÇÕES PARA VENDAS - ADICIONE ESTA PARTE
+// ================================================
+
+export function getSales() {
+  try {
+    const data = localStorage.getItem('sales_app_data');
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Erro ao buscar vendas:', error);
+    return [];
+  }
+}
+
+export function saveSales(sales) {
+  try {
+    localStorage.setItem('sales_app_data', JSON.stringify(sales));
+    return true;
+  } catch (error) {
+    console.error('Erro ao salvar vendas:', error);
+    return false;
+  }
+}
+
+export function makeSale(saleData) {
+  const sales = getSales();
+  const newSale = {
+    ...saleData,
+    id: Date.now(),
+    date: new Date().toISOString()
+  };
+  sales.push(newSale);
+  saveSales(sales);
+  return newSale;
+}
+
+export function searchProducts(query) {
+  const products = getProducts();
+  if (!query.trim()) return [];
+  
+  const lowerQuery = query.toLowerCase();
+  return products.filter(p => 
+    p.name.toLowerCase().includes(lowerQuery) || 
+    (p.sku && p.sku.toLowerCase().includes(lowerQuery))
+  );
+}
