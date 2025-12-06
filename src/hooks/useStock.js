@@ -1,7 +1,7 @@
 ﻿// useStock.js - Hook para estoque com PERSISTÊNCIA SUPABASE
 import { useState, useEffect, useCallback } from 'react';
 import { useProducts } from '../context/ProductsContext';
-import { supabase } from '../services/storage'; // ⚠️ ATENÇÃO: ajuste este import!
+import { supabaseStockService } from '../services/supabaseStock'; // CORREÇÃO AQUI!
 
 export const useStock = () => {
   const { products: originalProducts, updateStock: updateContextStock } = useProducts();
@@ -21,8 +21,8 @@ export const useStock = () => {
         throw new Error('Falha ao atualizar contexto local');
       }
       
-      // 2. PERSISTIR NO SUPABASE
-      const supabaseResult = await saveToSupabase(productId, quantityChange);
+      // 2. PERSISTIR NO SUPABASE (CORREÇÃO: usando supabaseStockService)
+      const supabaseResult = await supabaseStockService.updateStock(productId, quantityChange);
       
       if (supabaseResult.success) {
         console.log(`✅ Salvo no Supabase: ${productId}`);
@@ -52,59 +52,6 @@ export const useStock = () => {
       return false;
     }
   }, [updateContextStock]);
-
-  // 🔥 FUNÇÃO QUE SALVA NO SUPABASE
-  const saveToSupabase = async (productId, quantityChange) => {
-    try {
-      // ⚠️ ⚠️ ⚠️ SUBSTITUA POR SUA LÓGICA REAL DO SUPABASE! ⚠️ ⚠️ ⚠️
-      // Exemplo (descomente e ajuste):
-      /*
-      const { data: product, error: fetchError } = await supabase
-        .from('products')
-        .select('stock')
-        .eq('id', productId)
-        .single();
-      
-      if (fetchError) throw fetchError;
-      
-      const newStock = Math.max(0, (product.stock || 0) + quantityChange);
-      
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ 
-          stock: newStock,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', productId);
-      
-      if (updateError) throw updateError;
-      
-      // Log da operação
-      await supabase
-        .from('stock_logs')
-        .insert({
-          product_id: productId,
-          quantity_change: quantityChange,
-          new_stock: newStock,
-          created_at: new Date().toISOString()
-        });
-      */
-      
-      // ⚠️ TEMPORÁRIO: Simula sucesso
-      console.log(`📤 [SIMULAÇÃO] Supabase: ${productId}, ${quantityChange}`);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      return { success: true, newStock: null };
-      
-    } catch (error) {
-      console.error('❌ Erro no Supabase:', error);
-      return { 
-        success: false, 
-        error: error.message,
-        queued: true 
-      };
-    }
-  };
 
   // 🔥 BACKUP LOCAL (fallback)
   const saveToLocalBackup = (productId, quantityChange) => {
@@ -162,7 +109,7 @@ export const useStock = () => {
     }
   };
 
-  // 🔥 SINCRONIZAR PENDÊNCIAS
+  // 🔥 SINCRONIZAR PENDÊNCIAS (CORREÇÃO: usando supabaseStockService)
   const syncPendingUpdates = useCallback(async () => {
     try {
       const pendingKey = 'pending_stock_updates';
@@ -186,7 +133,7 @@ export const useStock = () => {
         }
         
         try {
-          const result = await saveToSupabase(item.productId, item.quantityChange);
+          const result = await supabaseStockService.updateStock(item.productId, item.quantityChange);
           
           if (result.success) {
             successful.push(item);
