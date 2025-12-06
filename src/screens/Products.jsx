@@ -5,11 +5,9 @@ import "./Products.css"; // Importe um CSS específico
 function emptyForm() { 
   return { 
     id: null, 
-    sku: "", 
     name: "", 
-    price: "", 
     cost: "", 
-    unit: "un", 
+    price: "", 
     stock: "", 
     min_stock: "" 
   }; 
@@ -112,20 +110,6 @@ export default function Products() {
 
         <div className="form-row">
           <div className="form-col">
-            <label>Preço de Venda (R$) *</label>
-            <input 
-              className="input" 
-              type="number" 
-              name="price" 
-              min="0" 
-              step="0.01"
-              placeholder="0,00"
-              value={form.price} 
-              onChange={handleChange} 
-            />
-          </div>
-
-          <div className="form-col">
             <label>Custo (R$)</label>
             <input 
               className="input" 
@@ -140,16 +124,17 @@ export default function Products() {
           </div>
 
           <div className="form-col">
-            <label>Unidade</label>
-            <select className="input" name="unit" value={form.unit} onChange={handleChange}>
-              <option value="un">Unidade (un)</option>
-              <option value="kg">Quilo (kg)</option>
-              <option value="g">Grama (g)</option>
-              <option value="lt">Litro (lt)</option>
-              <option value="ml">Mililitro (ml)</option>
-              <option value="cx">Caixa (cx)</option>
-              <option value="pct">Pacote (pct)</option>
-            </select>
+            <label>Preço de Venda (R$) *</label>
+            <input 
+              className="input" 
+              type="number" 
+              name="price" 
+              min="0" 
+              step="0.01"
+              placeholder="0,00"
+              value={form.price} 
+              onChange={handleChange} 
+            />
           </div>
         </div>
 
@@ -176,17 +161,6 @@ export default function Products() {
               min="0"
               placeholder="0"
               value={form.min_stock} 
-              onChange={handleChange} 
-            />
-          </div>
-
-          <div className="form-col">
-            <label>Código (SKU)</label>
-            <input 
-              className="input" 
-              name="sku" 
-              placeholder="Código do produto"
-              value={form.sku} 
               onChange={handleChange} 
             />
           </div>
@@ -222,9 +196,9 @@ export default function Products() {
               <thead>
                 <tr>
                   <th>Produto</th>
+                  <th>Custo</th>
                   <th>Preço</th>
                   <th>Estoque</th>
-                  <th>Unidade</th>
                   <th className="actions-column">Ações</th>
                 </tr>
               </thead>
@@ -233,16 +207,15 @@ export default function Products() {
                   <tr key={p.id}>
                     <td className="product-cell">
                       <strong>{p.name}</strong>
-                      {p.sku && <div className="sku-text">SKU: {p.sku}</div>}
                     </td>
+                    <td className="cost-cell">R$ {Number(p.cost).toFixed(2)}</td>
                     <td className="price-cell">R$ {Number(p.price).toFixed(2)}</td>
                     <td className="stock-cell">
                       <span className={`stock-badge ${p.stock <= p.min_stock ? 'stock-low' : 'stock-ok'}`}>
-                        {p.stock} {p.unit}
+                        {p.stock}
                       </span>
                       {p.min_stock > 0 && <div className="min-stock">Mín: {p.min_stock}</div>}
                     </td>
-                    <td className="unit-cell">{p.unit}</td>
                     <td className="actions-cell">
                       <div className="actions-buttons">
                         <button className="button btn-edit" onClick={() => handleEdit(p)}>Editar</button>
