@@ -6,18 +6,21 @@ export const useStock = () => {
 
   const addToCart = (productId) => {
     const product = products.find(p => p.id === productId);
-    if (product && product.estoque > 0) {
+    if (product && (product.stock || 0) > 0) {
       // Diminui estoque
       updateStock(productId, -1);
       
-      // Atualiza carrinho
+      // Atualiza carrinho com estrutura correta
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       const existing = cart.find(item => item.id === productId);
       
       if (existing) {
         existing.quantidade += 1;
       } else {
-        cart.push({ ...product, quantidade: 1 });
+        cart.push({ 
+          ...product, 
+          quantidade: 1 
+        });
       }
       
       localStorage.setItem('cart', JSON.stringify(cart));
@@ -44,28 +47,41 @@ export const useStock = () => {
   // Verificar se pode adicionar ao carrinho
   const canAddToCart = (productId) => {
     const product = products.find(p => p.id === productId);
-    return product && product.estoque > 0;
+    return product && (product.stock || 0) > 0;
   };
 
   // Obter produtos com estoque baixo
   const getLowStockProducts = () => {
-    return products.filter(p => p.estoque <= (p.minEstoque || 3));
+    return products.filter(p => (p.stock || 0) <= (p.min_stock || 3));
   };
 
   // Obter produtos sem estoque
   const getOutOfStockProducts = () => {
-    return products.filter(p => p.estoque <= 0);
+    return products.filter(p => (p.stock || 0) <= 0);
   };
 
   // Calcular valor total do estoque
   const getTotalStockValue = () => {
     return products.reduce((total, product) => {
-      return total + (product.estoque * (product.preco || 0));
+      return total + ((product.stock || 0) * (product.price || 0));
     }, 0);
   };
 
+  // Converter estrutura para compatibilidade com Sales.jsx
+  const getProductsForSales = () => {
+    return products.map(product => ({
+      id: product.id,
+      nome: product.name,
+      codigo: product.sku,
+      preco: product.price,
+      custo: product.cost,
+      estoque: product.stock,
+      minEstoque: product.min_stock
+    }));
+  };
+
   return { 
-    products, 
+    products: getProductsForSales(), // Retornar estrutura compatível com Sales.jsx
     addToCart, 
     updateStock,
     incrementStock: addStock,

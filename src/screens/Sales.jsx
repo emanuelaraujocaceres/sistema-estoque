@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { getProducts, makeSale, getProductById } from "../services/storage";
+import { getProducts, makeSale } from "../services/storage";
 import { useStock } from '../hooks/useStock';
 import "./Sales.css";
 
@@ -44,21 +44,21 @@ function Sales() {
       return products.filter(product => {
         // Filtro por busca
         const matchesSearch = !query.trim() || 
-          (product.nome && product.nome.toLowerCase().includes(lowerQuery)) ||
-          (product.codigo && product.codigo.toLowerCase().includes(lowerQuery));
+          (product.name && product.name.toLowerCase().includes(lowerQuery)) ||
+          (product.sku && product.sku.toLowerCase().includes(lowerQuery));
         
         // Filtro por categoria (status de estoque)
         let matchesCategory = true;
         if (selectedCategory !== "all") {
           switch (selectedCategory) {
             case "in_stock":
-              matchesCategory = product.estoque > 0;
+              matchesCategory = (product.stock || 0) > 0;
               break;
             case "low_stock":
-              matchesCategory = product.estoque > 0 && product.estoque <= (product.minEstoque || 3);
+              matchesCategory = (product.stock || 0) > 0 && (product.stock || 0) <= (product.min_stock || 3);
               break;
             case "out_of_stock":
-              matchesCategory = product.estoque <= 0;
+              matchesCategory = (product.stock || 0) <= 0;
               break;
           }
         }
@@ -79,8 +79,8 @@ function Sales() {
       }
 
       // Verificar estoque
-      if (product.estoque <= 0) {
-        alert(`❌ ${product.nome} está sem estoque!`);
+      if ((product.stock || 0) <= 0) {
+        alert(`❌ ${product.name} está sem estoque!`);
         return;
       }
 
@@ -106,10 +106,10 @@ function Sales() {
             ...cart,
             {
               productId: product.id,
-              name: product.nome || "Produto sem nome",
+              name: product.name || "Produto sem nome",
               qty: 1,
-              unitPrice: Number(product.preco) || 0,
-              subtotal: Number(product.preco) || 0
+              unitPrice: Number(product.price) || 0,
+              subtotal: Number(product.price) || 0
             }
           ]);
         }
@@ -142,8 +142,8 @@ function Sales() {
       const diferenca = newQty - item.qty;
 
       // Verificar se tem estoque suficiente para aumentar
-      if (diferenca > 0 && newQty > product.estoque + item.qty) {
-        alert(`⚠️ Estoque insuficiente!\n${product.nome}: ${product.estoque} disponíveis`);
+      if (diferenca > 0 && newQty > (product.stock || 0) + item.qty) {
+        alert(`⚠️ Estoque insuficiente!\n${product.name}: ${product.stock || 0} disponíveis`);
         return;
       }
 
@@ -281,9 +281,9 @@ function Sales() {
   
   // Estatísticas - usar products do hook
   const filteredProducts = searchProducts();
-  const productsInStock = products.filter(p => p.estoque > 0).length;
-  const productsLowStock = products.filter(p => p.estoque > 0 && p.estoque <= (p.minEstoque || 3)).length;
-  const productsOutOfStock = products.filter(p => p.estoque <= 0).length;
+  const productsInStock = products.filter(p => (p.stock || 0) > 0).length;
+  const productsLowStock = products.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= (p.min_stock || 3)).length;
+  const productsOutOfStock = products.filter(p => (p.stock || 0) <= 0).length;
 
   return (
     <div className="sales-page-container">
@@ -409,8 +409,8 @@ function Sales() {
                 ) : (
                   <div className="products-grid">
                     {filteredProducts.map(product => {
-                      const isLowStock = product.estoque > 0 && product.estoque <= (product.minEstoque || 3);
-                      const isOutOfStock = product.estoque <= 0;
+                      const isLowStock = (product.stock || 0) > 0 && (product.stock || 0) <= (product.min_stock || 3);
+                      const isOutOfStock = (product.stock || 0) <= 0;
                       const statusText = isOutOfStock ? 'Sem Estoque' : isLowStock ? 'Estoque Baixo' : 'Em Estoque';
                       const statusColor = isOutOfStock ? '#dc2626' : isLowStock ? '#d97706' : '#059669';
                       
@@ -428,10 +428,10 @@ function Sales() {
                               className="product-name"
                               style={{color: '#111827', textShadow: '0 1px 2px rgba(255, 255, 255, 0.9)'}}
                             >
-                              {product.nome}
+                              {product.name}
                             </h4>
-                            {product.codigo && (
-                              <span className="product-sku">{product.codigo}</span>
+                            {product.sku && (
+                              <span className="product-sku">{product.sku}</span>
                             )}
                           </div>
                           
@@ -439,7 +439,7 @@ function Sales() {
                             className="product-price"
                             style={{color: '#1f2937', fontWeight: '900', textShadow: '0 2px 4px rgba(255, 255, 255, 0.8)'}}
                           >
-                            R$ {Number(product.preco || 0).toFixed(2)}
+                            R$ {Number(product.price || 0).toFixed(2)}
                           </div>
                           
                           <div className={`product-stock ${isOutOfStock ? "stock-out" : isLowStock ? "stock-low" : "stock-ok"}`}>
@@ -450,11 +450,11 @@ function Sales() {
                               className="stock-qty"
                               style={{fontWeight: '700', color: statusColor}}
                             >
-                              {product.estoque || 0}
+                              {product.stock || 0}
                             </span>
                             <span className="stock-label">unidades</span>
-                            {product.minEstoque > 0 && (
-                              <span className="min-stock">Mín: {product.minEstoque}</span>
+                            {product.min_stock > 0 && (
+                              <span className="min-stock">Mín: {product.min_stock}</span>
                             )}
                           </div>
                           
@@ -524,8 +524,8 @@ function Sales() {
                   <div className="cart-items-list">
                     {cart.map(item => {
                       const product = products.find(p => p.id === item.productId);
-                      const estoqueDisponivel = product?.estoque || 0;
-                      const isLowStock = product?.estoque > 0 && product?.estoque <= (product?.minEstoque || 3);
+                      const estoqueDisponivel = product?.stock || 0;
+                      const isLowStock = (product?.stock || 0) > 0 && (product?.stock || 0) <= (product?.min_stock || 3);
                       
                       return (
                         <div key={item.productId} className="cart-item">

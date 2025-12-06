@@ -9,45 +9,60 @@ export const useProducts = () => {
 export const ProductsProvider = ({ children }) => {
   const [products, setProducts] = useState(() => {
     try {
-      const saved = localStorage.getItem('products');
+      const saved = localStorage.getItem('products_app_data'); // Usar mesma key que storage.js
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Converter para estrutura unificada se necessário
+          return parsed.map(product => ({
+            id: product.id,
+            name: product.name || product.nome || 'Produto sem nome',
+            sku: product.sku || product.codigo || '',
+            price: product.price || product.preco || 0,
+            cost: product.cost || product.custo || 0,
+            stock: product.stock || product.estoque || 0,
+            min_stock: product.min_stock || product.minEstoque || 0,
+            created_at: product.created_at || new Date().toISOString(),
+            updated_at: product.updated_at || new Date().toISOString()
+          }));
+        }
       }
     } catch (e) {
       console.error('Erro ao carregar produtos:', e);
     }
     
+    // Retornar estrutura padrão compatível com storage.js
     return [
       { 
         id: 1, 
-        nome: 'Café', 
-        codigo: 'CAFE001', 
-        preco: 50.00, 
-        custo: 35.00,
-        estoque: 4, 
-        minEstoque: 3,
+        name: 'Café',
+        sku: 'CAFE001',
+        price: 50.00,
+        cost: 35.00,
+        stock: 4,
+        min_stock: 3,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
       { 
         id: 2, 
-        nome: 'Gasolina', 
-        codigo: 'GAS001', 
-        preco: 100.00, 
-        custo: 80.00,
-        estoque: 0, 
-        minEstoque: 10,
+        name: 'Gasolina',
+        sku: 'GAS001',
+        price: 100.00,
+        cost: 80.00,
+        stock: 0,
+        min_stock: 10,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
       { 
         id: 3, 
-        nome: 'Cerveja Heineken 269ml', 
-        codigo: 'CERVEJA001', 
-        preco: 20.00, 
-        custo: 15.00,
-        estoque: 10, 
-        minEstoque: 5,
+        name: 'Cerveja Heineken 269ml',
+        sku: 'CERVEJA001',
+        price: 20.00,
+        cost: 15.00,
+        stock: 10,
+        min_stock: 5,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
@@ -56,7 +71,20 @@ export const ProductsProvider = ({ children }) => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('products', JSON.stringify(products));
+      // Salvar com estrutura unificada
+      const productsToSave = products.map(product => ({
+        id: product.id,
+        name: product.name,
+        sku: product.sku || '',
+        price: product.price || 0,
+        cost: product.cost || 0,
+        stock: product.stock || 0,
+        min_stock: product.min_stock || 0,
+        created_at: product.created_at || new Date().toISOString(),
+        updated_at: product.updated_at || new Date().toISOString()
+      }));
+      
+      localStorage.setItem('products_app_data', JSON.stringify(productsToSave));
     } catch (e) {
       console.error('Erro ao salvar produtos:', e);
     }
@@ -67,10 +95,11 @@ export const ProductsProvider = ({ children }) => {
     setProducts(prevProducts => 
       prevProducts.map(product => {
         if (product.id === productId) {
-          const newStock = Math.max(0, product.estoque + quantityChange);
+          const currentStock = product.stock || 0;
+          const newStock = Math.max(0, currentStock + quantityChange);
           return { 
             ...product, 
-            estoque: newStock,
+            stock: newStock,
             updated_at: new Date().toISOString()
           };
         }
@@ -88,12 +117,12 @@ export const ProductsProvider = ({ children }) => {
   const addProduct = (productData) => {
     const newProduct = {
       id: Date.now(),
-      nome: productData.nome,
-      codigo: productData.codigo || `PROD${Date.now()}`,
-      preco: parseFloat(productData.preco) || 0,
-      custo: parseFloat(productData.custo) || 0,
-      estoque: Math.max(0, parseInt(productData.estoque) || 0),
-      minEstoque: Math.max(0, parseInt(productData.minEstoque) || 0),
+      name: productData.name || productData.nome || 'Novo Produto',
+      sku: productData.sku || productData.codigo || '',
+      price: parseFloat(productData.price) || 0,
+      cost: parseFloat(productData.cost) || 0,
+      stock: Math.max(0, parseInt(productData.stock) || 0),
+      min_stock: Math.max(0, parseInt(productData.min_stock) || 0),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -109,7 +138,12 @@ export const ProductsProvider = ({ children }) => {
         if (product.id === productId) {
           return { 
             ...product, 
-            ...updatedData,
+            name: updatedData.name || product.name,
+            sku: updatedData.sku || product.sku,
+            price: parseFloat(updatedData.price) || product.price,
+            cost: parseFloat(updatedData.cost) || product.cost,
+            stock: Math.max(0, parseInt(updatedData.stock) || product.stock),
+            min_stock: Math.max(0, parseInt(updatedData.min_stock) || product.min_stock),
             updated_at: new Date().toISOString()
           };
         }
@@ -132,16 +166,28 @@ export const ProductsProvider = ({ children }) => {
       prevProducts.map(product => {
         const update = stockUpdates.find(u => u.productId === product.id);
         if (update) {
-          const newStock = product.estoque + (update.quantity || 0);
+          const newStock = (product.stock || 0) + (update.quantity || 0);
           return { 
             ...product, 
-            estoque: Math.max(0, newStock),
+            stock: Math.max(0, newStock),
             updated_at: new Date().toISOString()
           };
         }
         return product;
       })
     );
+  };
+
+  // Sincronizar com storage.js
+  const syncWithStorage = () => {
+    try {
+      const storageProducts = JSON.parse(localStorage.getItem('products_app_data') || '[]');
+      if (Array.isArray(storageProducts) && storageProducts.length > 0) {
+        setProducts(storageProducts);
+      }
+    } catch (error) {
+      console.error('Erro ao sincronizar com storage:', error);
+    }
   };
 
   const value = {
@@ -152,7 +198,8 @@ export const ProductsProvider = ({ children }) => {
     updateProduct,
     deleteProduct,
     getProduct,
-    addBulkStock
+    addBulkStock,
+    syncWithStorage
   };
 
   return (
