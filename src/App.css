@@ -1,4 +1,4 @@
-/* src/App.css - Design System Profissional Completo - VERSÃO CORRIGIDA */
+/* src/App.css - Design System Profissional Completo - VERSÃO FINAL CORRIGIDA */
 :root {
   /* Cores principais */
   --primary: #4361ee;
@@ -70,16 +70,7 @@
   --z-toast: 600;
 }
 
-/* ====== CORREÇÕES CRÍTICAS PARA SCROLL DUPLO ====== */
-/* RESET COMPLETO - Evita múltiplos viewports */
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* ← IMPEDE SCROLL NO BODY */
-}
-
+/* ====== RESET CORRETO ====== */
 * {
   margin: 0;
   padding: 0;
@@ -96,23 +87,26 @@ body {
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
   color: var(--gray-800);
   line-height: 1.6;
-  height: 100vh; /* ← Garante altura total */
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  position: fixed; /* ← FIXA O BODY, sem scroll */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /* IMPORTANTE: NÃO use overflow: hidden aqui */
+  overflow-x: hidden; /* Apenas horizontal */
 }
 
-/* ====== LAYOUT PRINCIPAL CORRIGIDO ====== */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ====== LAYOUT PRINCIPAL ====== */
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* ← Usa 100vh, não min-height */
+  min-height: 100vh;
   position: relative;
-  overflow: hidden; /* ← IMPEDE SCROLL NO APP */
+  width: 100%;
 }
 
 /* Header Moderno */
@@ -124,7 +118,7 @@ body {
   top: 0;
   z-index: var(--z-sticky);
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0; /* ← Impede compressão */
+  flex-shrink: 0;
 }
 
 .header-container {
@@ -239,7 +233,7 @@ body {
   padding: var(--space-md);
   animation: slideDown 0.3s ease;
   border-bottom: 3px solid var(--warning-dark);
-  flex-shrink: 0; /* ← Impede compressão */
+  flex-shrink: 0;
 }
 
 @keyframes slideDown {
@@ -280,21 +274,15 @@ body {
 
 /* ====== MAIN CONTENT CORRIGIDO ====== */
 .main {
-  flex: 1; /* ← Ocupa espaço restante */
+  flex: 1;
   padding: var(--space-xl);
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
   position: relative;
-  overflow-y: auto; /* ← APENAS AQUI TEM SCROLL */
+  /* IMPORTANTE: NÃO use overflow-y: auto aqui */
+  /* Deixe o scroll natural do body */
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch; /* Scroll suave no mobile */
-}
-
-/* Garante que os componentes dentro do main não tenham scroll próprio */
-.main > * {
-  overflow: visible !important;
-  max-height: none !important;
 }
 
 /* Cards Elegantes */
@@ -648,7 +636,7 @@ body {
   padding: var(--space-xl) 0;
   margin-top: auto;
   border-top: 3px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0; /* ← Impede compressão */
+  flex-shrink: 0;
 }
 
 .footer-content {
@@ -787,17 +775,22 @@ body {
 .gap-3 { gap: var(--space-lg); }
 .gap-4 { gap: var(--space-xl); }
 
-/* ====== CORREÇÃO PARA SCROLL DUPLO NAS PÁGINAS ====== */
-/* Remove overflow automático de todos os elementos dentro do main */
-.main .card,
-.main .grid,
-.main .table-responsive,
-.main .sales-page-container,
-.main .products-container,
-.main .reports-container {
+/* ====== CORREÇÃO PARA PULL-TO-REFRESH ====== */
+/* Habilita o scroll natural do body */
+body {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* Remove qualquer overflow do .app e .main */
+.app,
+.main {
   overflow: visible !important;
+}
+
+/* Garante que não haja scrolls duplos */
+.main > * {
   max-height: none !important;
-  height: auto !important;
 }
 
 /* Responsividade */
@@ -911,10 +904,28 @@ body {
   }
 }
 
-/* Ajustes para iOS */
+/* Ajustes para iOS - Pull-to-refresh */
 @supports (-webkit-touch-callout: none) {
+  body {
+    /* Força o pull-to-refresh no iOS */
+    height: 100%;
+    min-height: -webkit-fill-available;
+    overscroll-behavior-y: auto;
+  }
+  
+  html {
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  #root {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
   input, select, textarea {
-    font-size: 16px !important; /* Evita zoom automático no iOS */
+    font-size: 16px !important;
   }
 }
 
