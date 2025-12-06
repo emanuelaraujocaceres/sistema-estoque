@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { getProducts, makeSale } from "../services/storage";
+import { makeSale } from "../services/storage";
 import { useStock } from '../hooks/useStock';
 import "./Sales.css";
 
@@ -11,54 +11,68 @@ function Sales() {
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
   
-  // USAR O HOOK useStock PARA GERENCIAR PRODUTOS E ESTOQUE
-  const { products, addToCart: addToCartHook, updateStock } = useStock();
+  // 🔥 USAR O HOOK useStock CORRETAMENTE
+  const { 
+    products, 
+    addToCart: addToCartHook, 
+    updateStock
+  } = useStock();
 
-  // Carregar produtos do hook useStock
+  // 🔥 DEBUG PARA VERIFICAR DADOS
   useEffect(() => {
-    loadProducts();
-  }, []);
-
-  function loadProducts() {
-    try {
-      setLoading(true);
-      // Os produtos já estão disponíveis através do hook useStock
-      setError(null);
-    } catch (error) {
-      console.error("Erro ao carregar produtos:", error);
-      setError("Erro ao carregar produtos. Verifique o console.");
-    } finally {
-      setLoading(false);
+    console.log('🚨 ========== DEBUG SALES ==========');
+    console.log('📦 Total de produtos:', products.length);
+    
+    if (products.length > 0) {
+      console.log('🔍 Estrutura do primeiro produto:', {
+        id: products[0].id,
+        name: products[0].name || products[0].nome,
+        stock: products[0].stock || products[0].estoque,
+        price: products[0].price || products[0].preco
+      });
+      
+      console.log('📊 Estoque disponível:');
+      products.forEach((p, i) => {
+        const stock = p.stock || p.estoque || 0;
+        console.log(`   ${i + 1}. ${p.name || p.nome}: ${stock} unidades`);
+      });
     }
-  }
+    console.log('====================================');
+  }, [products]);
 
-  // Buscar produtos
+  // 🔥 BUSCAR PRODUTOS (CORRIGIDO)
   function searchProducts() {
     try {
       if (!query.trim() && selectedCategory === "all") {
-        return products; // Retorna todos os produtos quando não há filtro
+        return products;
       }
       
       const lowerQuery = query.toLowerCase().trim();
       
       return products.filter(product => {
+        // 🔥 USAR PROPRIEDADES COMPATÍVEIS
+        const name = product.name || product.nome || "";
+        const sku = product.sku || product.codigo || "";
+        const stock = product.stock || product.estoque || 0;
+        const minStock = product.min_stock || product.minEstoque || 3;
+        
         // Filtro por busca
         const matchesSearch = !query.trim() || 
-          (product.name && product.name.toLowerCase().includes(lowerQuery)) ||
-          (product.sku && product.sku.toLowerCase().includes(lowerQuery));
+          (name.toLowerCase().includes(lowerQuery)) ||
+          (sku.toLowerCase().includes(lowerQuery));
         
-        // Filtro por categoria (status de estoque)
+        // Filtro por categoria
         let matchesCategory = true;
         if (selectedCategory !== "all") {
           switch (selectedCategory) {
             case "in_stock":
-              matchesCategory = (product.stock || 0) > 0;
+              matchesCategory = stock > 0;
               break;
             case "low_stock":
-              matchesCategory = (product.stock || 0) > 0 && (product.stock || 0) <= (product.min_stock || 3);
+              matchesCategory = stock > 0 && stock <= minStock;
               break;
             case "out_of_stock":
-              matchesCategory = (product.stock || 0) <= 0;
+              matchesCategory = stock <= 0;
               break;
           }
         }
@@ -71,20 +85,23 @@ function Sales() {
     }
   }
 
-  // ✅ ADICIONAR AO CARRINHO (ATUALIZA ESTOQUE AUTOMATICAMENTE)
+  // 🔥 ADICIONAR AO CARRINHO (CORRIGIDO)
   function addToCart(product) {
     try {
       if (!product || !product.id) {
         throw new Error("Produto inválido");
       }
 
-      // Verificar estoque
-      if ((product.stock || 0) <= 0) {
-        alert(`❌ ${product.name} está sem estoque!`);
+      // 🔥 VERIFICAR ESTOQUE COM PROPRIEDADES CORRETAS
+      const stock = product.stock || product.estoque || 0;
+      const name = product.name || product.nome || "Produto";
+      
+      if (stock <= 0) {
+        alert(`❌ ${name} está sem estoque!`);
         return;
       }
 
-      // USAR O HOOK addToCart que atualiza estoque automaticamente
+      // USAR O HOOK addToCart
       const success = addToCartHook(product.id);
       
       if (success) {
@@ -106,10 +123,10 @@ function Sales() {
             ...cart,
             {
               productId: product.id,
-              name: product.name || "Produto sem nome",
+              name: product.name || product.nome || "Produto sem nome",
               qty: 1,
-              unitPrice: Number(product.price) || 0,
-              subtotal: Number(product.price) || 0
+              unitPrice: Number(product.price || product.preco || 0),
+              subtotal: Number(product.price || product.preco || 0)
             }
           ]);
         }
@@ -123,7 +140,7 @@ function Sales() {
     }
   }
 
-  // ✅ MUDAR QUANTIDADE NO CARRINHO (ATUALIZA ESTOQUE AUTOMATICAMENTE)
+  // 🔥 MUDAR QUANTIDADE NO CARRINHO (CORRIGIDO)
   function changeQty(productId, newQty) {
     try {
       if (newQty < 1) {
@@ -140,32 +157,17 @@ function Sales() {
       }
 
       const diferenca = newQty - item.qty;
+      const stockDisponivel = product.stock || product.estoque || 0;
 
       // Verificar se tem estoque suficiente para aumentar
-      if (diferenca > 0 && newQty > (product.stock || 0) + item.qty) {
-        alert(`⚠️ Estoque insuficiente!\n${product.name}: ${product.stock || 0} disponíveis`);
+      if (diferenca > 0 && newQty > stockDisponivel + item.qty) {
+        alert(`⚠️ Estoque insuficiente!\n${product.name || product.nome}: ${stockDisponivel} disponíveis`);
         return;
       }
 
       // Atualizar estoque usando o hook
       if (diferenca !== 0) {
         updateStock(productId, -diferenca); // Negativo para diminuir estoque
-        
-        // Atualizar carrinho no localStorage se estiver aumentando
-        if (diferenca > 0) {
-          const cartStorage = JSON.parse(localStorage.getItem('cart') || '[]');
-          const existing = cartStorage.find(i => i.id === productId);
-          
-          if (existing) {
-            existing.quantidade += diferenca;
-          } else {
-            cartStorage.push({ 
-              ...product, 
-              quantidade: diferenca 
-            });
-          }
-          localStorage.setItem('cart', JSON.stringify(cartStorage));
-        }
       }
 
       // Atualizar carrinho local
@@ -185,7 +187,7 @@ function Sales() {
     }
   }
 
-  // ✅ REMOVER ITEM DO CARRINHO (DEVOLVE ESTOQUE)
+  // 🔥 REMOVER ITEM DO CARRINHO (CORRIGIDO)
   function removeItem(productId) {
     try {
       const item = cart.find(i => i.productId === productId);
@@ -208,7 +210,7 @@ function Sales() {
     }
   }
 
-  // ✅ FINALIZAR VENDA
+  // 🔥 FINALIZAR VENDA (CORRIGIDO)
   async function finalize() {
     try {
       if (cart.length === 0) {
@@ -232,23 +234,19 @@ function Sales() {
           subtotal: item.subtotal
         })),
         total: total,
-        paymentMethod: payment
+        paymentMethod: payment,
+        date: new Date().toISOString()
       };
 
-      // Registrar venda no sistema de storage
+      // Registrar venda
       const newSale = await makeSale(saleData);
 
       // Feedback
-      alert(`✅ Venda realizada com sucesso!\nCódigo: ${newSale.id}\nTotal: R$ ${total.toFixed(2)}`);
+      alert(`✅ Venda realizada com sucesso!\nCódigo: ${newSale.id || newSale._id || 'N/A'}\nTotal: R$ ${total.toFixed(2)}`);
 
-      // Limpar carrinho (o estoque JÁ foi atualizado pelo hook addToCart)
+      // Limpar carrinho
       setCart([]);
-      
-      // Limpar carrinho do localStorage
       localStorage.removeItem('cart');
-      
-      // Recarregar produtos para atualizar a interface
-      loadProducts();
 
     } catch (error) {
       console.error("Erro ao finalizar venda:", error);
@@ -258,39 +256,40 @@ function Sales() {
     }
   }
 
-  // Limpar carrinho (DEVOLVE TODO O ESTOQUE)
+  // 🔥 LIMPAR CARRINHO (CORRIGIDO)
   function clearCart() {
     if (cart.length === 0) return;
     
     if (window.confirm(`Limpar carrinho com ${cart.length} itens?\nO estoque será devolvido.`)) {
       // Devolver estoque de todos os itens
       cart.forEach(item => {
-        updateStock(item.productId, item.qty); // Devolve estoque
+        updateStock(item.productId, item.qty);
       });
       
-      // Limpar carrinho do localStorage
+      // Limpar carrinho
       localStorage.removeItem('cart');
-      
-      // Limpar carrinho local
       setCart([]);
     }
   }
 
-  // Calcular total
+  // 🔥 CALCULAR ESTATÍSTICAS (CORRIGIDO)
+  const filteredProducts = searchProducts();
   const totalVenda = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
   
-  // Estatísticas - usar products do hook
-  const filteredProducts = searchProducts();
-  const productsInStock = products.filter(p => (p.stock || 0) > 0).length;
-  const productsLowStock = products.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= (p.min_stock || 3)).length;
-  const productsOutOfStock = products.filter(p => (p.stock || 0) <= 0).length;
+  const productsInStock = products.filter(p => (p.stock || p.estoque || 0) > 0).length;
+  const productsLowStock = products.filter(p => {
+    const stock = p.stock || p.estoque || 0;
+    const minStock = p.min_stock || p.minEstoque || 3;
+    return stock > 0 && stock <= minStock;
+  }).length;
+  const productsOutOfStock = products.filter(p => (p.stock || p.estoque || 0) <= 0).length;
 
   return (
     <div className="sales-page-container">
       {error && (
         <div className="error-banner">
           <span>⚠️ {error}</span>
-          <button onClick={loadProducts} className="button btn-sm btn-secondary">
+          <button onClick={() => window.location.reload()} className="button btn-sm btn-secondary">
             Tentar novamente
           </button>
         </div>
@@ -321,7 +320,7 @@ function Sales() {
         </div>
       </div>
 
-      {/* Área principal com scroll */}
+      {/* Área principal */}
       <div className="sales-main-content">
         <div className="sales-layout">
           {/* COLUNA ESQUERDA: PRODUTOS */}
@@ -409,8 +408,10 @@ function Sales() {
                 ) : (
                   <div className="products-grid">
                     {filteredProducts.map(product => {
-                      const isLowStock = (product.stock || 0) > 0 && (product.stock || 0) <= (product.min_stock || 3);
-                      const isOutOfStock = (product.stock || 0) <= 0;
+                      const stock = product.stock || product.estoque || 0;
+                      const minStock = product.min_stock || product.minEstoque || 3;
+                      const isLowStock = stock > 0 && stock <= minStock;
+                      const isOutOfStock = stock <= 0;
                       const statusText = isOutOfStock ? 'Sem Estoque' : isLowStock ? 'Estoque Baixo' : 'Em Estoque';
                       const statusColor = isOutOfStock ? '#dc2626' : isLowStock ? '#d97706' : '#059669';
                       
@@ -428,10 +429,10 @@ function Sales() {
                               className="product-name"
                               style={{color: '#111827', textShadow: '0 1px 2px rgba(255, 255, 255, 0.9)'}}
                             >
-                              {product.name}
+                              {product.name || product.nome || "Sem nome"}
                             </h4>
-                            {product.sku && (
-                              <span className="product-sku">{product.sku}</span>
+                            {(product.sku || product.codigo) && (
+                              <span className="product-sku">{product.sku || product.codigo}</span>
                             )}
                           </div>
                           
@@ -439,7 +440,7 @@ function Sales() {
                             className="product-price"
                             style={{color: '#1f2937', fontWeight: '900', textShadow: '0 2px 4px rgba(255, 255, 255, 0.8)'}}
                           >
-                            R$ {Number(product.price || 0).toFixed(2)}
+                            R$ {Number(product.price || product.preco || 0).toFixed(2)}
                           </div>
                           
                           <div className={`product-stock ${isOutOfStock ? "stock-out" : isLowStock ? "stock-low" : "stock-ok"}`}>
@@ -450,11 +451,11 @@ function Sales() {
                               className="stock-qty"
                               style={{fontWeight: '700', color: statusColor}}
                             >
-                              {product.stock || 0}
+                              {stock}
                             </span>
                             <span className="stock-label">unidades</span>
-                            {product.min_stock > 0 && (
-                              <span className="min-stock">Mín: {product.min_stock}</span>
+                            {minStock > 0 && (
+                              <span className="min-stock">Mín: {minStock}</span>
                             )}
                           </div>
                           
@@ -484,7 +485,7 @@ function Sales() {
                 </span>
                 <button 
                   className="button btn-secondary btn-sm"
-                  onClick={loadProducts}
+                  onClick={() => window.location.reload()}
                   disabled={loading}
                 >
                   🔄 Atualizar
@@ -524,8 +525,9 @@ function Sales() {
                   <div className="cart-items-list">
                     {cart.map(item => {
                       const product = products.find(p => p.id === item.productId);
-                      const estoqueDisponivel = product?.stock || 0;
-                      const isLowStock = (product?.stock || 0) > 0 && (product?.stock || 0) <= (product?.min_stock || 3);
+                      const estoqueDisponivel = product ? (product.stock || product.estoque || 0) : 0;
+                      const minStock = product ? (product.min_stock || product.minEstoque || 3) : 3;
+                      const isLowStock = estoqueDisponivel > 0 && estoqueDisponivel <= minStock;
                       
                       return (
                         <div key={item.productId} className="cart-item">
@@ -645,7 +647,6 @@ function Sales() {
                     </div>
                     
                     <div className="checkout-actions">
-                      {/* O botão "Finalizar Venda" foi removido aqui e colocado no rodapé fixo */}
                       <button
                         className="button btn-secondary checkout-btn"
                         onClick={clearCart}
@@ -666,7 +667,7 @@ function Sales() {
         </div>
       </div>
 
-      {/* BOTÃO FIXO NO RODAPÉ - SEMPRE VISÍVEL */}
+      {/* BOTÃO FIXO NO RODAPÉ */}
       <div className="sales-fixed-footer">
         <button
           className="button btn-success checkout-btn fixed-checkout-btn"
