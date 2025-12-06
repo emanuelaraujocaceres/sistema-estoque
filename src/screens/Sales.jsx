@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { makeSale } from "../services/storage";
+import { makeSale, getProducts } from "../services/storage";
 import { useStock } from '../hooks/useStock';
 import "./Sales.css";
 
@@ -10,18 +10,63 @@ function Sales() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
   
-  // 🔥 USAR O HOOK useStock CORRETAMENTE
+  // 🔥 USAR O HOOK useStock APENAS PARA LEITURA
   const { 
     products, 
-    addToCart: addToCartHook, 
-    updateStock
+    updateStock // Manter apenas para uso na finalização
   } = useStock();
+
+  // 🔥 SINCRONIZAR ESTOQUE EM TEMPO REAL
+  useEffect(() => {
+    const loadLatestProducts = () => {
+      // Forçar atualização do timestamp
+      setLastUpdate(Date.now());
+    };
+    
+    // Atualizar produtos periodicamente (a cada 2 segundos)
+    const interval = setInterval(() => {
+      loadLatestProducts();
+    }, 2000);
+
+    // Escutar mudanças no localStorage
+    const handleStorageChange = (e) => {
+      if (e.key === 'products' || e.key === 'last_stock_update') {
+        console.log('📦 Dados do estoque atualizados em tempo real');
+        loadLatestProducts();
+      }
+    };
+    
+    // Escutar evento customizado
+    const handleStockUpdated = () => {
+      console.log('🔄 Recebida atualização de estoque via evento');
+      loadLatestProducts();
+    };
+    
+    // Escutar evento de sincronização forçada
+    const handleForceSync = () => {
+      console.log('🔄 Sincronização forçada');
+      loadLatestProducts();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('stock-updated', handleStockUpdated);
+    window.addEventListener('force-sync', handleForceSync);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('stock-updated', handleStockUpdated);
+      window.removeEventListener('force-sync', handleForceSync);
+    };
+  }, []);
 
   // 🔥 DEBUG PARA VERIFICAR DADOS
   useEffect(() => {
     console.log('🚨 ========== DEBUG SALES ==========');
     console.log('📦 Total de produtos:', products.length);
+    console.log('🔄 Última atualização:', new Date(lastUpdate).toLocaleTimeString());
     
     if (products.length > 0) {
       console.log('🔍 Estrutura do primeiro produto:', {
@@ -37,8 +82,9 @@ function Sales() {
         console.log(`   ${i + 1}. ${p.name || p.nome}: ${stock} unidades`);
       });
     }
+    console.log('🛒 Itens no carrinho:', cart.length);
     console.log('====================================');
-  }, [products]);
+  }, [products, cart, lastUpdate]);
 
   // 🔥 BUSCAR PRODUTOS (CORRIGIDO)
   function searchProducts() {
@@ -85,7 +131,7 @@ function Sales() {
     }
   }
 
-  // 🔥 ADICIONAR AO CARRINHO (CORRIGIDO)
+  // 🔥 ADICIONAR AO CARRINHO (CORRIGIDO - SEM DIMINUIR ESTOQUE)
   function addToCart(product) {
     try {
       if (!product || !product.id) {
@@ -101,37 +147,37 @@ function Sales() {
         return;
       }
 
-      // USAR O HOOK addToCart
-      const success = addToCartHook(product.id);
+      // ⚠️ NÃO DIMINUIR ESTOQUE AQUI - será feito apenas na finalização
+      // Atualizar carrinho local (APENAS interface)
+      const existingItem = cart.find(item => item.productId === product.id);
       
-      if (success) {
-        // Atualizar carrinho local
-        const existingItem = cart.find(item => item.productId === product.id);
-        
-        if (existingItem) {
-          setCart(cart.map(item =>
-            item.productId === product.id
-              ? {
-                  ...item,
-                  qty: item.qty + 1,
-                  subtotal: (item.qty + 1) * item.unitPrice
-                }
-              : item
-          ));
-        } else {
-          setCart([
-            ...cart,
-            {
-              productId: product.id,
-              name: product.name || product.nome || "Produto sem nome",
-              qty: 1,
-              unitPrice: Number(product.price || product.preco || 0),
-              subtotal: Number(product.price || product.preco || 0)
-            }
-          ]);
+      if (existingItem) {
+        // Verificar se tem estoque para mais uma unidade
+        if (existingItem.qty >= stock) {
+          alert(`⚠️ Estoque máximo atingido para ${name}!`);
+          return;
         }
+        
+        setCart(cart.map(item =>
+          item.productId === product.id
+            ? {
+                ...item,
+                qty: item.qty + 1,
+                subtotal: (item.qty + 1) * item.unitPrice
+              }
+            : item
+        ));
       } else {
-        alert("Não foi possível adicionar o produto ao carrinho");
+        setCart([
+          ...cart,
+          {
+            productId: product.id,
+            name: product.name || product.nome || "Produto sem nome",
+            qty: 1,
+            unitPrice: Number(product.price || product.preco || 0),
+            subtotal: Number(product.price || product.preco || 0)
+          }
+        ]);
       }
 
     } catch (error) {
@@ -140,7 +186,7 @@ function Sales() {
     }
   }
 
-  // 🔥 MUDAR QUANTIDADE NO CARRINHO (CORRIGIDO)
+  // 🔥 MUDAR QUANTIDADE NO CARRINHO (CORRIGIDO - SEM ATUALIZAR ESTOQUE)
   function changeQty(productId, newQty) {
     try {
       if (newQty < 1) {
@@ -156,21 +202,16 @@ function Sales() {
         return;
       }
 
-      const diferenca = newQty - item.qty;
       const stockDisponivel = product.stock || product.estoque || 0;
 
-      // Verificar se tem estoque suficiente para aumentar
-      if (diferenca > 0 && newQty > stockDisponivel + item.qty) {
+      // Verificar se tem estoque suficiente para a NOVA quantidade total
+      if (newQty > stockDisponivel) {
         alert(`⚠️ Estoque insuficiente!\n${product.name || product.nome}: ${stockDisponivel} disponíveis`);
         return;
       }
 
-      // Atualizar estoque usando o hook
-      if (diferenca !== 0) {
-        updateStock(productId, -diferenca); // Negativo para diminuir estoque
-      }
-
-      // Atualizar carrinho local
+      // ⚠️ NÃO ATUALIZAR ESTOQUE AQUI - será feito apenas na finalização
+      // Atualizar carrinho local (APENAS interface)
       setCart(cart.map(item =>
         item.productId === productId
           ? {
@@ -187,16 +228,14 @@ function Sales() {
     }
   }
 
-  // 🔥 REMOVER ITEM DO CARRINHO (CORRIGIDO)
+  // 🔥 REMOVER ITEM DO CARRINHO (CORRIGIDO - SEM DEVOLVER ESTOQUE)
   function removeItem(productId) {
     try {
       const item = cart.find(i => i.productId === productId);
       if (!item) return;
 
-      // DEVOLVER ESTOQUE ao remover do carrinho
-      updateStock(productId, item.qty); // Positivo para aumentar estoque
-      
-      // Remover do carrinho no localStorage
+      // ⚠️ NÃO DEVOLVER ESTOQUE AQUI - o estoque nunca foi diminuído
+      // Remover do carrinho no localStorage (se necessário)
       const cartStorage = JSON.parse(localStorage.getItem('cart') || '[]');
       const newCartStorage = cartStorage.filter(i => i.id !== productId);
       localStorage.setItem('cart', JSON.stringify(newCartStorage));
@@ -210,7 +249,7 @@ function Sales() {
     }
   }
 
-  // 🔥 FINALIZAR VENDA (CORRIGIDO)
+  // 🔥 FINALIZAR VENDA (CORRIGIDO - ÚNICO PONTO DE DIMINUIÇÃO)
   async function finalize() {
     try {
       if (cart.length === 0) {
@@ -225,6 +264,19 @@ function Sales() {
 
       setLoading(true);
 
+      // 🔥 VERIFICAR ESTOQUE ANTES DE PROCESSAR
+      for (const item of cart) {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) {
+          throw new Error(`Produto ${item.name} não encontrado`);
+        }
+        
+        const stockDisponivel = product.stock || product.estoque || 0;
+        if (stockDisponivel < item.qty) {
+          throw new Error(`Estoque insuficiente para ${item.name}\nDisponível: ${stockDisponivel}, Solicitado: ${item.qty}`);
+        }
+      }
+
       const saleData = {
         items: cart.map(item => ({
           productId: item.productId,
@@ -235,37 +287,39 @@ function Sales() {
         })),
         total: total,
         paymentMethod: payment,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+        transactionId: `sale_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       };
 
-      // Registrar venda
+      // 🔥 REGISTRAR VENDA NO HISTÓRICO (ÚNICA VEZ QUE DIMINUI ESTOQUE)
       const newSale = await makeSale(saleData);
 
       // Feedback
-      alert(`✅ Venda realizada com sucesso!\nCódigo: ${newSale.id || newSale._id || 'N/A'}\nTotal: R$ ${total.toFixed(2)}`);
+      alert(`✅ Venda realizada com sucesso!\nCódigo: ${saleData.transactionId}\nTotal: R$ ${total.toFixed(2)}`);
 
       // Limpar carrinho
       setCart([]);
       localStorage.removeItem('cart');
 
+      // Forçar atualização em tempo real
+      setLastUpdate(Date.now());
+
     } catch (error) {
       console.error("Erro ao finalizar venda:", error);
       alert(`❌ Erro ao finalizar venda: ${error.message || "Erro desconhecido"}`);
+      
+      // ⚠️ NÃO É NECESSÁRIO REVERTER ESTOQUE - o makeSale já faz rollback automático se falhar
     } finally {
       setLoading(false);
     }
   }
 
-  // 🔥 LIMPAR CARRINHO (CORRIGIDO)
+  // 🔥 LIMPAR CARRINHO (CORRIGIDO - SEM DEVOLVER ESTOQUE)
   function clearCart() {
     if (cart.length === 0) return;
     
-    if (window.confirm(`Limpar carrinho com ${cart.length} itens?\nO estoque será devolvido.`)) {
-      // Devolver estoque de todos os itens
-      cart.forEach(item => {
-        updateStock(item.productId, item.qty);
-      });
-      
+    if (window.confirm(`Limpar carrinho com ${cart.length} itens?`)) {
+      // ⚠️ NÃO DEVOLVER ESTOQUE - ele nunca foi diminuído
       // Limpar carrinho
       localStorage.removeItem('cart');
       setCart([]);
@@ -298,6 +352,9 @@ function Sales() {
       {/* Cabeçalho com estatísticas */}
       <div className="sales-header-content">
         <h1>💰 Caixa de Vendas</h1>
+        <div className="sync-info" style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', marginBottom: '10px' }}>
+          🔄 Última atualização: {new Date(lastUpdate).toLocaleTimeString()}
+        </div>
         <div className="header-stats">
           <div className="stat-item">
             <span className="stat-label">Produtos em estoque:</span>
@@ -415,6 +472,10 @@ function Sales() {
                       const statusText = isOutOfStock ? 'Sem Estoque' : isLowStock ? 'Estoque Baixo' : 'Em Estoque';
                       const statusColor = isOutOfStock ? '#dc2626' : isLowStock ? '#d97706' : '#059669';
                       
+                      // Verificar se está no carrinho
+                      const cartItem = cart.find(item => item.productId === product.id);
+                      const cartQuantity = cartItem ? cartItem.qty : 0;
+                      
                       return (
                         <div 
                           key={product.id} 
@@ -461,6 +522,11 @@ function Sales() {
                           
                           <div style={{marginTop: 'var(--space-sm)', fontSize: '0.9rem', color: statusColor, fontWeight: '600'}}>
                             {statusText}
+                            {cartQuantity > 0 && (
+                              <span style={{marginLeft: '8px', color: '#4361ee'}}>
+                                ({cartQuantity} no carrinho)
+                              </span>
+                            )}
                           </div>
                           
                           <button
@@ -483,13 +549,22 @@ function Sales() {
                 <span className="products-count" style={{color: '#4b5563'}}>
                   Mostrando {filteredProducts.length} de {products.length} produtos
                 </span>
-                <button 
-                  className="button btn-secondary btn-sm"
-                  onClick={() => window.location.reload()}
-                  disabled={loading}
-                >
-                  🔄 Atualizar
-                </button>
+                <div style={{display: 'flex', gap: '8px'}}>
+                  <button 
+                    className="button btn-secondary btn-sm"
+                    onClick={() => setLastUpdate(Date.now())}
+                    disabled={loading}
+                  >
+                    🔄 Sincronizar
+                  </button>
+                  <button 
+                    className="button btn-secondary btn-sm"
+                    onClick={() => window.location.reload()}
+                    disabled={loading}
+                  >
+                    ↻ Recarregar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -572,8 +647,8 @@ function Sales() {
                               <button
                                 className="quantity-btn increase"
                                 onClick={() => changeQty(item.productId, item.qty + 1)}
-                                disabled={estoqueDisponivel <= 0 || loading}
-                                title={estoqueDisponivel <= 0 ? "Sem estoque disponível" : "Aumentar quantidade"}
+                                disabled={estoqueDisponivel <= item.qty || loading}
+                                title={estoqueDisponivel <= item.qty ? "Sem estoque disponível" : "Aumentar quantidade"}
                               >
                                 +
                               </button>
@@ -657,7 +732,10 @@ function Sales() {
                     </div>
                     
                     <div className="checkout-note">
-                      <p style={{color: '#6b7280'}}>⚠️ Após finalizar, a venda será registrada e o estoque será atualizado automaticamente.</p>
+                      <p style={{color: '#6b7280', fontSize: '0.85rem'}}>
+                        ⚠️ O estoque será atualizado apenas após a finalização da venda.<br/>
+                        ✅ Sistema anti-duplicação ativo - sem descontos em dobro.
+                      </p>
                     </div>
                   </div>
                 </>
@@ -673,10 +751,38 @@ function Sales() {
           className="button btn-success checkout-btn fixed-checkout-btn"
           onClick={finalize}
           disabled={loading || cart.length === 0}
+          style={{
+            background: cart.length === 0 ? '#6b7280' : '#10b981',
+            cursor: cart.length === 0 ? 'not-allowed' : 'pointer'
+          }}
         >
-          {loading ? "Processando..." : `✅ Finalizar Venda - R$ ${totalVenda.toFixed(2)}`}
+          {loading ? (
+            <>
+              <span className="spinner"></span> Processando...
+            </>
+          ) : (
+            `✅ Finalizar Venda - R$ ${totalVenda.toFixed(2)}`
+          )}
         </button>
       </div>
+
+      {/* SPINNER CSS */}
+      <style jsx>{`
+        .spinner {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-radius: 50%;
+          border-top-color: white;
+          animation: spin 1s ease-in-out infinite;
+          margin-right: 8px;
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

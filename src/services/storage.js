@@ -1,6 +1,7 @@
 // src/services/storage.js - COMPLETO E CORRIGIDO
 const STORAGE_KEY = 'products_app_data';
 const SALES_KEY = 'sales_app_data';
+const PROCESSED_SALES_KEY = 'processed_sales';
 
 // ================================================
 // FUNÇÕES PARA PRODUTOS
@@ -36,6 +37,13 @@ export function saveProducts(products) {
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
     console.log(`Produtos salvos: ${products.length} itens`);
+    
+    // 🔥 NOTIFICAR MUDANÇAS PARA OUTRAS TELAS
+    window.dispatchEvent(new CustomEvent('products-updated', {
+      detail: { timestamp: Date.now() }
+    }));
+    localStorage.setItem('last_stock_update', Date.now().toString());
+    
     return true;
   } catch (error) {
     console.error('Erro crítico ao salvar produtos:', error);
@@ -290,9 +298,10 @@ export function saveSales(sales) {
   }
 }
 
+// 🔥 FUNÇÃO makeSale CORRIGIDA - ANTI-DUPLICAÇÃO
 export function makeSale(saleData) {
   try {
-    console.log('Iniciando processo de venda:', saleData);
+    console.log('💵 Iniciando processo de venda:', saleData);
     
     if (!saleData || typeof saleData !== 'object') {
       throw new Error('Dados da venda inválidos');
@@ -302,10 +311,23 @@ export function makeSale(saleData) {
       throw new Error('A venda deve conter pelo menos um item');
     }
     
+    // 🔥 VERIFICAR SE ESTA TRANSAÇÃO JÁ FOI PROCESSADA
+    const transactionId = saleData.transactionId || `sale_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const processed = JSON.parse(localStorage.getItem(PROCESSED_SALES_KEY) || '[]');
+    
+    if (processed.includes(transactionId)) {
+      console.warn(`⚠️ Transação ${transactionId} já processada, ignorando...`);
+      return { 
+        id: transactionId, 
+        status: 'already_processed',
+        message: 'Venda já registrada anteriormente'
+      };
+    }
+    
     const sales = getSales();
     const products = getProducts();
     
-    // Validar todos os itens antes de processar
+    // 🔥 VALIDAR TODOS OS ITENS ANTES DE PROCESSAR
     const validatedItems = saleData.items.map((item, index) => {
       if (!item.productId && item.productId !== 0) {
         throw new Error(`Item ${index + 1}: ID do produto não especificado`);
@@ -320,8 +342,9 @@ export function makeSale(saleData) {
         throw new Error(`Item ${index + 1}: Produto não encontrado (ID: ${item.productId})`);
       }
       
-      if (product.stock < item.qty) {
-        throw new Error(`Item ${index + 1}: Estoque insuficiente para ${product.name}. Disponível: ${product.stock}, Solicitado: ${item.qty}`);
+      const currentStock = product.stock || 0;
+      if (currentStock < item.qty) {
+        throw new Error(`Item ${index + 1}: Estoque insuficiente para ${product.name}. Disponível: ${currentStock}, Solicitado: ${item.qty}`);
       }
       
       return {
@@ -333,22 +356,23 @@ export function makeSale(saleData) {
       };
     });
     
-    // Calcular total
+    // 🔥 CALCULAR TOTAL
     const total = validatedItems.reduce((sum, item) => sum + item.subtotal, 0);
     
-    // Criar nova venda
+    // 🔥 CRIAR NOVA VENDA
     const newSale = {
-      id: String(Date.now()),
+      id: transactionId,
       items: validatedItems,
       total: total,
       paymentMethod: saleData.paymentMethod || 'dinheiro',
       created_at: new Date().toISOString(),
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      status: 'completed'
     };
     
-    console.log('Nova venda criada:', newSale);
+    console.log('✅ Nova venda criada:', newSale);
     
-    // Atualizar estoque
+    // 🔥 ATUALIZAR ESTOQUE (DIMINUIR)
     const updatedProducts = [...products];
     
     validatedItems.forEach(item => {
@@ -358,23 +382,43 @@ export function makeSale(saleData) {
         updatedProducts[productIndex] = {
           ...updatedProducts[productIndex],
           stock: Math.max(0, newStock),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          last_sale: new Date().toISOString()
         };
         
-        console.log(`Estoque atualizado: ${updatedProducts[productIndex].name} - Novo estoque: ${newStock}`);
+        console.log(`📉 Estoque atualizado: ${updatedProducts[productIndex].name} - Novo estoque: ${newStock}`);
       }
     });
     
-    // Salvar tudo
+    // 🔥 SALVAR TUDO
     sales.push(newSale);
     saveSales(sales);
     saveProducts(updatedProducts);
     
-    console.log('Venda processada com sucesso!');
+    // 🔥 MARCAR TRANSAÇÃO COMO PROCESSADA
+    processed.push(transactionId);
+    // Manter apenas últimos 100 transações para evitar overflow
+    const trimmedProcessed = processed.slice(-100);
+    localStorage.setItem(PROCESSED_SALES_KEY, JSON.stringify(trimmedProcessed));
+    
+    // 🔥 NOTIFICAR ATUALIZAÇÃO PARA OUTRAS TELAS
+    window.dispatchEvent(new CustomEvent('stock-updated', {
+      detail: {
+        type: 'sale',
+        transactionId,
+        timestamp: Date.now()
+      }
+    }));
+    
+    // 🔥 ATUALIZAR TIMESTAMP PARA SINCRONIZAÇÃO
+    localStorage.setItem('last_stock_update', Date.now().toString());
+    
+    console.log('💵 Venda processada com sucesso!', transactionId);
     return newSale;
+    
   } catch (error) {
-    console.error('Erro ao processar venda:', error);
-    alert(`Erro ao processar venda: ${error.message}`);
+    console.error('❌ Erro ao processar venda:', error);
+    alert(`❌ Erro ao processar venda: ${error.message}`);
     throw error;
   }
 }
@@ -382,10 +426,34 @@ export function makeSale(saleData) {
 export function clearSales() {
   try {
     localStorage.removeItem(SALES_KEY);
+    localStorage.removeItem(PROCESSED_SALES_KEY);
     console.log('Vendas limpas com sucesso');
     return true;
   } catch (error) {
     console.error('Erro ao limpar vendas:', error);
+    return false;
+  }
+}
+
+// 🔥 FUNÇÃO PARA LIMPAR TRANSAÇÕES PROCESSADAS
+export function clearProcessedTransactions() {
+  try {
+    localStorage.removeItem(PROCESSED_SALES_KEY);
+    console.log('Histórico de transações processadas limpo');
+    return true;
+  } catch (error) {
+    console.error('Erro ao limpar transações:', error);
+    return false;
+  }
+}
+
+// 🔥 FUNÇÃO PARA VERIFICAR SE TRANSAÇÃO FOI PROCESSADA
+export function isSaleProcessed(transactionId) {
+  try {
+    const processed = JSON.parse(localStorage.getItem(PROCESSED_SALES_KEY) || '[]');
+    return processed.includes(transactionId);
+  } catch (error) {
+    console.error('Erro ao verificar transação:', error);
     return false;
   }
 }
@@ -396,6 +464,8 @@ export function clearAllData() {
     if (window.confirm('⚠️ ATENÇÃO: Isso apagará TODOS os dados (produtos e vendas). Tem certeza?')) {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(SALES_KEY);
+      localStorage.removeItem(PROCESSED_SALES_KEY);
+      localStorage.removeItem('last_stock_update');
       console.log('Todos os dados foram limpos');
       alert('Todos os dados foram apagados. A página será recarregada.');
       window.location.reload();
@@ -414,11 +484,13 @@ export function exportData() {
   try {
     const products = getProducts();
     const sales = getSales();
+    const processed = JSON.parse(localStorage.getItem(PROCESSED_SALES_KEY) || '[]');
     
     const data = {
       timestamp: new Date().toISOString(),
       products: products,
       sales: sales,
+      processed_transactions: processed,
       total_products: products.length,
       total_sales: sales.length,
       total_sales_value: sales.reduce((sum, sale) => sum + (sale.total || 0), 0)
@@ -464,6 +536,11 @@ export function importData(jsonString) {
       saveSales(data.sales);
     }
     
+    // Salvar transações processadas se existirem
+    if (data.processed_transactions && Array.isArray(data.processed_transactions)) {
+      localStorage.setItem(PROCESSED_SALES_KEY, JSON.stringify(data.processed_transactions));
+    }
+    
     alert(`Dados importados com sucesso!\n${data.products.length} produtos\n${data.sales?.length || 0} vendas`);
     window.location.reload();
     
@@ -473,4 +550,51 @@ export function importData(jsonString) {
     alert(`Erro ao importar dados: ${error.message}`);
     return false;
   }
+}
+
+// 🔥 FUNÇÃO PARA ATUALIZAR ESTOQUE DIRETAMENTE (usada pelo hook useStock)
+export function updateStockDirect(productId, quantityChange) {
+  try {
+    console.log(`📦 Atualizando estoque diretamente: ${productId}, ${quantityChange}`);
+    
+    const products = getProducts();
+    const productIndex = products.findIndex(p => p.id === productId);
+    
+    if (productIndex === -1) {
+      console.error(`❌ Produto ${productId} não encontrado`);
+      return false;
+    }
+    
+    const currentStock = products[productIndex].stock || 0;
+    const newStock = Math.max(0, currentStock + quantityChange);
+    
+    products[productIndex] = {
+      ...products[productIndex],
+      stock: newStock,
+      updated_at: new Date().toISOString()
+    };
+    
+    saveProducts(products);
+    
+    console.log(`✅ Estoque atualizado diretamente: ${productId} = ${newStock} (${quantityChange > 0 ? '+' : ''}${quantityChange})`);
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Erro ao atualizar estoque diretamente:', error);
+    return false;
+  }
+}
+
+// 🔥 FUNÇÃO PARA OBTER ÚLTIMA ATUALIZAÇÃO
+export function getLastUpdateTimestamp() {
+  return localStorage.getItem('last_stock_update') || '0';
+}
+
+// 🔥 FUNÇÃO PARA FORÇAR SINCRONIZAÇÃO
+export function forceSync() {
+  localStorage.setItem('last_stock_update', Date.now().toString());
+  window.dispatchEvent(new CustomEvent('force-sync', {
+    detail: { timestamp: Date.now() }
+  }));
+  return true;
 }
