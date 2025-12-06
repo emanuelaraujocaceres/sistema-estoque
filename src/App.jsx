@@ -4,7 +4,6 @@ import Products from "./screens/Products";
 import Sales from "./screens/Sales";
 import Reports from "./screens/Reports";
 import Login from "./screens/Login";
-import Profile from "./screens/Profile";   // Tela Profile
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import "./App.css";
@@ -17,7 +16,7 @@ export default function App() {
           <header className="header">
             <h1>Sistema Estoque & Caixa</h1>
             <nav>
-              <Link to="/profile">Perfil</Link>
+              {/* Removido "Perfil" - agora está na Home */}
               <Link to="/">Home</Link>
               <Link to="/products">Estoque</Link>
               <Link to="/sales">Caixa</Link>
@@ -38,14 +37,7 @@ export default function App() {
                 }
               />
 
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Removida a rota /profile */}
 
               <Route
                 path="/products"
