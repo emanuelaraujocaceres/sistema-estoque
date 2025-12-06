@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { getProducts, addProduct, updateProduct, deleteProduct, initDefaultProducts } from "../services/storage";
+import "./Products.css"; // Importe um CSS específico
 
 function emptyForm() { 
   return { 
@@ -91,15 +92,15 @@ export default function Products() {
   }
 
   return (
-    <div style={{ padding: "20px", maxWidth: "1000px", margin: "0 auto" }}>
+    <div className="products-container">
       {/* FORM */}
-      <div className="card" style={{ marginBottom: "20px" }}>
-        <h3 style={{ marginTop: 0, marginBottom: "20px", color: "#2d3748" }}>
+      <div className="card form-card">
+        <h3 className="form-title">
           {editing ? "✏️ Editar Produto" : "➕ Adicionar Produto"}
         </h3>
 
-        <div style={{ marginBottom: "15px" }}>
-          <label style={{ fontWeight: 500, display: "block", marginBottom: "5px" }}>Nome do Produto *</label>
+        <div className="form-group">
+          <label>Nome do Produto *</label>
           <input
             className="input"
             name="name"
@@ -109,9 +110,9 @@ export default function Products() {
           />
         </div>
 
-        <div className="row" style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "15px" }}>
-          <div className="col" style={{ flex: "1 1 200px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Preço de Venda (R$) *</label>
+        <div className="form-row">
+          <div className="form-col">
+            <label>Preço de Venda (R$) *</label>
             <input 
               className="input" 
               type="number" 
@@ -124,8 +125,8 @@ export default function Products() {
             />
           </div>
 
-          <div className="col" style={{ flex: "1 1 200px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Custo (R$)</label>
+          <div className="form-col">
+            <label>Custo (R$)</label>
             <input 
               className="input" 
               type="number" 
@@ -138,8 +139,8 @@ export default function Products() {
             />
           </div>
 
-          <div className="col" style={{ flex: "1 1 200px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Unidade</label>
+          <div className="form-col">
+            <label>Unidade</label>
             <select className="input" name="unit" value={form.unit} onChange={handleChange}>
               <option value="un">Unidade (un)</option>
               <option value="kg">Quilo (kg)</option>
@@ -152,9 +153,9 @@ export default function Products() {
           </div>
         </div>
 
-        <div className="row" style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
-          <div className="col" style={{ flex: "1 1 200px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Estoque Atual</label>
+        <div className="form-row">
+          <div className="form-col">
+            <label>Estoque Atual</label>
             <input 
               className="input" 
               type="number" 
@@ -166,8 +167,8 @@ export default function Products() {
             />
           </div>
 
-          <div className="col" style={{ flex: "1 1 200px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Estoque Mínimo</label>
+          <div className="form-col">
+            <label>Estoque Mínimo</label>
             <input 
               className="input" 
               type="number" 
@@ -179,8 +180,8 @@ export default function Products() {
             />
           </div>
 
-          <div className="col" style={{ flex: "1 1 200px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Código (SKU)</label>
+          <div className="form-col">
+            <label>Código (SKU)</label>
             <input 
               className="input" 
               name="sku" 
@@ -191,11 +192,11 @@ export default function Products() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <div className="form-actions">
           {editing ? (
             <>
               <button className="button btn-primary" onClick={handleSaveEdit}>💾 Salvar</button>
-              <button className="button" onClick={handleCancel} style={{ background: "#718096", color: "#fff" }}>
+              <button className="button btn-secondary" onClick={handleCancel}>
                 ❌ Cancelar
               </button>
             </>
@@ -206,52 +207,45 @@ export default function Products() {
       </div>
 
       {/* LISTA */}
-      <div className="card">
-        <h3 style={{ marginTop: 0, marginBottom: "15px", color: "#2d3748" }}>
+      <div className="card list-card">
+        <h3 className="list-title">
           📦 Produtos Cadastrados ({list.length})
         </h3>
 
         {list.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+          <div className="empty-state">
             Nenhum produto cadastrado. Adicione seu primeiro produto!
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="table" style={{ width: "100%", minWidth: "600px", fontSize: "14px" }}>
+          <div className="table-responsive">
+            <table className="table">
               <thead>
                 <tr>
                   <th>Produto</th>
                   <th>Preço</th>
                   <th>Estoque</th>
                   <th>Unidade</th>
-                  <th>Ações</th>
+                  <th className="actions-column">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {list.map(p => (
                   <tr key={p.id}>
-                    <td>
+                    <td className="product-cell">
                       <strong>{p.name}</strong>
-                      {p.sku && <div className="small">SKU: {p.sku}</div>}
+                      {p.sku && <div className="sku-text">SKU: {p.sku}</div>}
                     </td>
-                    <td>R$ {Number(p.price).toFixed(2)}</td>
-                    <td>
-                      <span style={{
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        background: p.stock <= p.min_stock ? "#fed7d7" : "#c6f6d5",
-                        color: p.stock <= p.min_stock ? "#9b2c2c" : "#276749",
-                        fontWeight: 500,
-                        display: "inline-block"
-                      }}>
+                    <td className="price-cell">R$ {Number(p.price).toFixed(2)}</td>
+                    <td className="stock-cell">
+                      <span className={`stock-badge ${p.stock <= p.min_stock ? 'stock-low' : 'stock-ok'}`}>
                         {p.stock} {p.unit}
                       </span>
-                      {p.min_stock > 0 && <div className="small">Mín: {p.min_stock}</div>}
+                      {p.min_stock > 0 && <div className="min-stock">Mín: {p.min_stock}</div>}
                     </td>
-                    <td>{p.unit}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: "6px" }}>
-                        <button className="button" onClick={() => handleEdit(p)} style={{ background: "#4299e1", color: "white" }}>Editar</button>
+                    <td className="unit-cell">{p.unit}</td>
+                    <td className="actions-cell">
+                      <div className="actions-buttons">
+                        <button className="button btn-edit" onClick={() => handleEdit(p)}>Editar</button>
                         <button className="button btn-danger" onClick={() => handleDelete(p.id, p.name)}>Excluir</button>
                       </div>
                     </td>
