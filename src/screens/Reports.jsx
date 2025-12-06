@@ -1,4 +1,5 @@
 ﻿import { getSales, getProducts } from "../services/storage";
+import "./Reports.css";
 
 function Reports(){
   const sales = getSales();

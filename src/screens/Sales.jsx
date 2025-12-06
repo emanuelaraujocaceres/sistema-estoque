@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { getProducts, makeSale } from "../services/storage";
+import "./Sales.css";
 
 function Sales(){
   const [products, setProducts] = useState([]);
