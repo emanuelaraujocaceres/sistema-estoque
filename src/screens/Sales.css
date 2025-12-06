@@ -1,4 +1,48 @@
 /* src/screens/Sales.css */
+/* ====== SOLUÇÃO NUCLEAR - REMOVE TODOS SCROLLS INTERNOS ====== */
+/* Remove TODOS os scrolls internos da página de vendas */
+.sales-page-container * {
+  overflow: visible !important;
+}
+
+.sales-page-container .sales-main-content {
+  overflow-y: auto !important;
+}
+
+/* Esconde TODAS as scrollbars exceto a principal */
+.sales-page-container *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.sales-main-content::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.sales-main-content::-webkit-scrollbar-track {
+  background: var(--gray-100) !important;
+}
+
+.sales-main-content::-webkit-scrollbar-thumb {
+  background: var(--gray-400) !important;
+  border-radius: var(--radius-full) !important;
+}
+
+.sales-main-content::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-500) !important;
+}
+
+/* Remove quaisquer limites de altura */
+.sales-page-container div {
+  max-height: none !important;
+  min-height: auto !important;
+  height: auto !important;
+}
+
+/* ====== CSS ORIGINAL (mas simplificado) ====== */
 .sales-page-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -7,6 +51,7 @@
   flex-direction: column;
   height: 100vh;
   max-height: 100vh;
+  overflow: hidden;
   background: var(--gray-50);
 }
 
@@ -95,7 +140,7 @@
   font-weight: 700;
 }
 
-/* ========== ÁREA PRINCIPAL - APENAS AQUI TEM SCROLL ========== */
+/* Área principal - ÚNICO SCROLL */
 .sales-main-content {
   flex: 1;
   padding: 0 var(--space-md) var(--space-xl);
@@ -103,32 +148,11 @@
   position: relative;
 }
 
-/* Scrollbar da área principal */
-.sales-main-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.sales-main-content::-webkit-scrollbar-track {
-  background: var(--gray-100);
-}
-
-.sales-main-content::-webkit-scrollbar-thumb {
-  background: var(--gray-400);
-  border-radius: var(--radius-full);
-}
-
-.sales-main-content::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-500);
-}
-
-/* ========== LAYOUT - NENHUM SCROLL INTERNO ========== */
+/* Layout */
 .sales-layout {
   display: grid;
   grid-template-columns: 1fr 380px;
   gap: var(--space-xl);
-  /* FORÇANDO: SEM SCROLL INTERNO */
-  overflow: visible !important;
-  min-height: 0;
 }
 
 @media (max-width: 1024px) {
@@ -138,13 +162,11 @@
   }
 }
 
-/* ========== COLUNA DE PRODUTOS - SEM SCROLL ========== */
+/* Coluna de Produtos */
 .products-column {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  /* FORÇANDO: SEM SCROLL */
-  overflow: visible !important;
 }
 
 .search-section {
@@ -242,31 +264,13 @@
   border-color: var(--primary);
 }
 
-/* Área dos produtos - SEM SCROLL */
+/* Área dos produtos */
 .products-area {
   background: white;
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--gray-200);
-  /* FORÇANDO: SEM SCROLL */
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-/* REMOVENDO QUALQUER SCROLLBAR INTERNA */
-.products-area::-webkit-scrollbar,
-.products-list::-webkit-scrollbar,
-.products-content::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-.products-list {
-  /* FORÇANDO: SEM SCROLL */
-  overflow: visible !important;
-  max-height: none !important;
 }
 
 /* Grid de Produtos */
@@ -462,32 +466,22 @@
   color: var(--gray-600);
 }
 
-/* ========== COLUNA DO CARRINHO - SEM SCROLL ========== */
+/* Coluna do Carrinho */
 .cart-column {
-  /* FORÇANDO: SEM SCROLL */
-  overflow: visible !important;
+  position: sticky;
+  top: 20px;
+  height: fit-content;
 }
 
-/* Seção do carrinho - SEM SCROLL */
+/* Seção do carrinho */
 .cart-section {
   background: white;
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--gray-200);
-  /* FORÇANDO: SEM SCROLL */
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-/* REMOVENDO SCROLLBARS DO CARRINHO */
-.cart-section::-webkit-scrollbar,
-.cart-content::-webkit-scrollbar,
-.cart-items-container::-webkit-scrollbar,
-.cart-items-list::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Cabeçalho do carrinho */
@@ -539,15 +533,12 @@
   font-style: italic;
 }
 
-/* Lista de Itens do Carrinho - SEM SCROLL */
+/* Lista de Itens do Carrinho */
 .cart-items-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
   margin-bottom: var(--space-xl);
-  /* FORÇANDO: SEM SCROLL */
-  overflow: visible !important;
-  max-height: none !important;
 }
 
 .cart-item {
@@ -690,7 +681,7 @@
   cursor: not-allowed;
 }
 
-/* ========== RESUMO DO CARRINHO ========== */
+/* Resumo do Carrinho */
 .cart-summary {
   background: var(--gray-50);
   border-radius: var(--radius-lg);
@@ -867,6 +858,10 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
+  }
+  
+  .cart-column {
+    position: static;
   }
 }
 
