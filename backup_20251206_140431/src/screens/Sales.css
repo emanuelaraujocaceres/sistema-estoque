@@ -43,7 +43,7 @@
   font-size: 0.85rem;
 }
 
-/* Cabeçalho com estatísticas - NÃO FIXO */
+/* Cabeçalho com estatísticas - REMOVENDO QUALQUER POSIÇÃO FIXA */
 .sales-header-content {
   flex-shrink: 0;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
@@ -53,7 +53,7 @@
   margin: 0 var(--space-md) var(--space-xl);
   box-shadow: var(--shadow-lg);
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
-  position: relative;
+  /* REMOVENDO position: relative/sticky/fixed */
 }
 
 .sales-header-content h1 {
@@ -100,34 +100,50 @@
   font-weight: 700;
 }
 
-/* Área principal - SIMPLIFICADA */
+/* Área principal - CONTEÚDO ROLÁVEL */
 .sales-main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 0 var(--space-md) var(--space-xl);
-  overflow: hidden;
+  overflow-y: auto; /* MUDADO: Agora tem scroll */
   position: relative;
 }
 
-/* Layout de Duas Colunas - REESTRUTURADO */
+/* Scrollbar da área principal */
+.sales-main-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sales-main-content::-webkit-scrollbar-track {
+  background: var(--gray-100);
+}
+
+.sales-main-content::-webkit-scrollbar-thumb {
+  background: var(--gray-400);
+  border-radius: var(--radius-full);
+}
+
+.sales-main-content::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-500);
+}
+
+/* Layout de Duas Colunas */
 .sales-layout {
   display: grid;
   grid-template-columns: 1fr 380px;
   gap: var(--space-xl);
-  flex: 1;
   min-height: 0;
-  overflow: hidden;
 }
 
 @media (max-width: 1024px) {
   .sales-layout {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: auto auto;
   }
 }
 
-/* Coluna de Produtos - SCROLL INTERNO */
+/* Coluna de Produtos */
 .products-column {
   display: flex;
   flex-direction: column;
@@ -466,7 +482,7 @@
   color: var(--gray-600);
 }
 
-/* ========== COLUNA DO CARRINHO - SIMPLIFICADA ========== */
+/* ========== COLUNA DO CARRINHO ========== */
 .cart-column {
   display: flex;
   flex-direction: column;
@@ -852,7 +868,7 @@
   margin: 0;
 }
 
-/* Botão FIXO no rodapé - REMOVIDO (não necessário com layout correto) */
+/* Botão FIXO no rodapé - REMOVIDO */
 .sales-fixed-footer {
   display: none;
 }
@@ -905,8 +921,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
-    flex: 1;
-    min-height: 0;
   }
   
   .products-column {
