@@ -7,10 +7,10 @@ export const useStock = () => {
   const addToCart = (productId) => {
     const product = products.find(p => p.id === productId);
     if (product && product.estoque > 0) {
-      # Diminui estoque
+      // Diminui estoque
       updateStock(productId, -1);
       
-      # Atualiza carrinho
+      // Atualiza carrinho
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       const existing = cart.find(item => item.id === productId);
       

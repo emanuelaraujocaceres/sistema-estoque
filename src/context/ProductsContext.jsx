@@ -10,27 +10,48 @@ export const ProductsProvider = ({ children }) => {
   const [products, setProducts] = useState(() => {
     try {
       const saved = localStorage.getItem('products');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Erro ao carregar produtos:', e);
+    }
+    
     return [
-      { id: 1, nome: 'CafÃ©', codigo: 'CAFE001', preco: 50, estoque: 4, minEstoque: 3 },
-      { id: 2, nome: 'Gasolina', codigo: 'GAS001', preco: 100, estoque: 0, minEstoque: 10 },
-      { id: 3, nome: 'Cerveja Heineken', codigo: 'CERVEJA001', preco: 20, estoque: 10, minEstoque: 5 },
+      { id: 1, nome: 'Café', codigo: 'CAFE001', preco: 50.00, estoque: 4, minEstoque: 3 },
+      { id: 2, nome: 'Gasolina', codigo: 'GAS001', preco: 100.00, estoque: 0, minEstoque: 10 },
+      { id: 3, nome: 'Cerveja Heineken 269ml', codigo: 'CERVEJA001', preco: 20.00, estoque: 10, minEstoque: 5 },
     ];
   });
 
   useEffect(() => {
-    localStorage.setItem('products', JSON.stringify(products));
+    try {
+      localStorage.setItem('products', JSON.stringify(products));
+    } catch (e) {
+      console.error('Erro ao salvar produtos:', e);
+    }
   }, [products]);
 
-  const updateStock = (id, change) => {
-    setProducts(prev => prev.map(p => 
-      p.id === id ? { ...p, estoque: Math.max(0, p.estoque + change) } : p
-    ));
+  const updateStock = (productId, quantityChange) => {
+    setProducts(prevProducts => 
+      prevProducts.map(product => {
+        if (product.id === productId) {
+          const newStock = Math.max(0, product.estoque + quantityChange);
+          return { ...product, estoque: newStock };
+        }
+        return product;
+      })
+    );
+  };
+
+  const value = {
+    products,
+    updateStock,
+    getProduct: (id) => products.find(p => p.id === id)
   };
 
   return (
-    <ProductsContext.Provider value={{ products, updateStock }}>
+    <ProductsContext.Provider value={value}>
       {children}
     </ProductsContext.Provider>
   );
