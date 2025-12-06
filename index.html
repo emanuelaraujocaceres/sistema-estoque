@@ -3,23 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    
+    <!-- ✅ MANIFEST (O plugin VitePWA vai injetar automaticamente) -->
+    <!-- Não precisa do link se usar VitePWA, mas pode manter -->
     <link rel="manifest" href="/manifest.json" />
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#4361ee" />
+    
+    <!-- ✅ META TAGS PWA -->
+    <meta name="theme-color" content="#2c7a7b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <meta name="description" content="Sistema de gerenciamento de estoque e vendas" />
     <title>Sistema Estoque & Caixa</title>
     
-    <!-- ✅ CORREÇÃO AQUI: Substitua as meta tags -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <!-- Remova ou comente a linha antiga: -->
-    <!-- <meta name="apple-mobile-web-app-capable" content="yes" /> -->
+    <!-- ✅ ÍCONES APPLE -->
+    <link rel="apple-touch-icon" href="/icon-144x144.png" sizes="144x144">
+    <link rel="apple-touch-icon" href="/icon-192x192.png" sizes="192x192">
+    <link rel="apple-touch-icon" href="/icon-512x512.png" sizes="512x512">
     
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="/icon-192x192.png" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- ✅ O VitePWA injeta automaticamente o script do Service Worker -->
   </body>
 </html>
