@@ -1,58 +1,199 @@
-﻿import React, { createContext, useState, useContext, useEffect } from 'react';
+﻿import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import Home from "./screens/Home";
+import Products from "./screens/Products";
+import Sales from "./screens/Sales";
+import Reports from "./screens/Reports";
+import Login from "./screens/Login";
+import { AuthProvider } from "./auth/AuthContext";
+import { ProductsProvider } from "./context/ProductsContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { initDefaultProducts, clearAllData, exportData } from "./services/storage";
+import "./App.css";
 
-const ProductsContext = createContext();
+export default function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showDevTools, setShowDevTools] = useState(false);
 
-export const useProducts = () => {
-  return useContext(ProductsContext);
-};
-
-export const ProductsProvider = ({ children }) => {
-  const [products, setProducts] = useState(() => {
-    try {
-      const saved = localStorage.getItem('products');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error('Erro ao carregar produtos:', e);
-    }
-    
-    return [
-      { id: 1, nome: 'Café', codigo: 'CAFE001', preco: 50.00, estoque: 4, minEstoque: 3 },
-      { id: 2, nome: 'Gasolina', codigo: 'GAS001', preco: 100.00, estoque: 0, minEstoque: 10 },
-      { id: 3, nome: 'Cerveja Heineken 269ml', codigo: 'CERVEJA001', preco: 20.00, estoque: 10, minEstoque: 5 },
-    ];
-  });
-
+  // Inicializar produtos padrão
   useEffect(() => {
     try {
-      localStorage.setItem('products', JSON.stringify(products));
-    } catch (e) {
-      console.error('Erro ao salvar produtos:', e);
+      initDefaultProducts();
+    } catch (error) {
+      console.error("Erro ao inicializar produtos:", error);
     }
-  }, [products]);
+  }, []);
 
-  const updateStock = (productId, quantityChange) => {
-    setProducts(prevProducts => 
-      prevProducts.map(product => {
-        if (product.id === productId) {
-          const newStock = Math.max(0, product.estoque + quantityChange);
-          return { ...product, estoque: newStock };
-        }
-        return product;
-      })
-    );
+  const handleExport = () => {
+    try {
+      exportData();
+    } catch (error) {
+      alert("Erro ao exportar dados: " + error.message);
+    }
   };
 
-  const value = {
-    products,
-    updateStock,
-    getProduct: (id) => products.find(p => p.id === id)
+  const handleClearData = () => {
+    if (window.confirm("⚠️ PERIGO: Isso apagará TODOS os dados do sistema. Tem certeza ABSOLUTA?")) {
+      clearAllData();
+    }
   };
 
   return (
-    <ProductsContext.Provider value={value}>
-      {children}
-    </ProductsContext.Provider>
+    <ProductsProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <div className="app">
+            {/* Header */}
+            <header className="header">
+              <div className="header-container">
+                <div className="header-left">
+                  <button 
+                    className="menu-toggle" 
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    aria-label="Toggle menu"
+                  >
+                    {menuOpen ? '✕' : '☰'}
+                  </button>
+                  <h1>Sistema Estoque & Caixa</h1>
+                </div>
+                
+                <nav className={`header-nav ${menuOpen ? 'open' : ''}`}>
+                  <Link to="/" className="nav-link" onClick={() => setMenuOpen(false)}>
+                    <span className="nav-icon">🏠</span> Home
+                  </Link>
+                  <Link to="/products" className="nav-link" onClick={() => setMenuOpen(false)}>
+                    <span className="nav-icon">📦</span> Estoque
+                  </Link>
+                  <Link to="/sales" className="nav-link" onClick={() => setMenuOpen(false)}>
+                    <span className="nav-icon">💰</span> Caixa
+                  </Link>
+                  <Link to="/reports" className="nav-link" onClick={() => setMenuOpen(false)}>
+                    <span className="nav-icon">📊</span> Relatórios
+                  </Link>
+                  
+                  <div className="nav-divider"></div>
+                  
+                  <button 
+                    className="nav-link dev-tools-btn"
+                    onClick={() => setShowDevTools(!showDevTools)}
+                  >
+                    <span className="nav-icon">🛠️</span> Ferramentas
+                  </button>
+                </nav>
+              </div>
+            </header>
+
+            {/* Ferramentas de Desenvolvimento */}
+            {showDevTools && (
+              <div className="dev-tools-panel">
+                <div className="dev-tools-content">
+                  <h3>🛠️ Ferramentas de Desenvolvimento</h3>
+                  <div className="dev-tools-buttons">
+                    <button className="button btn-secondary" onClick={handleExport}>
+                      📤 Exportar Dados
+                    </button>
+                    <button 
+                      className="button btn-danger" 
+                      onClick={handleClearData}
+                      title="Limpa TODOS os dados do sistema"
+                    >
+                      🗑️ Limpar Todos os Dados
+                    </button>
+                    <button 
+                      className="button btn-secondary"
+                      onClick={() => window.location.reload()}
+                    >
+                      🔄 Recarregar Página
+                    </button>
+                  </div>
+                  <p className="dev-tools-warning">
+                    ⚠️ Use com cuidado! Algumas ações são irreversíveis.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Main Content */}
+            <main className="main">
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/products" element={
+                  <ProtectedRoute>
+                    <Products />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/sales" element={
+                  <ProtectedRoute>
+                    <Sales />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/reports" element={
+                  <ProtectedRoute>
+                    <Reports />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Página 404 */}
+                <Route path="*" element={
+                  <ProtectedRoute>
+                    <div className="not-found-container">
+                      <div className="not-found-card">
+                        <div className="not-found-icon">❌</div>
+                        <h2>404 - Página não encontrada</h2>
+                        <p>A página que você está procurando não existe ou foi movida.</p>
+                        <div className="not-found-actions">
+                          <Link to="/" className="button btn-primary" onClick={() => setMenuOpen(false)}>
+                            🏠 Voltar para Home
+                          </Link>
+                          <button 
+                            className="button btn-secondary" 
+                            onClick={() => window.history.back()}
+                          >
+                            ↩️ Voltar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </ProtectedRoute>
+                } />
+              </Routes>
+            </main>
+
+            {/* Footer */}
+            <footer className="footer">
+              <div className="footer-content">
+                <p>Sistema Estoque & Caixa © {new Date().getFullYear()} - Todos os direitos reservados</p>
+                <p className="footer-version">Versão 2.0.0 | Desenvolvido com React + Vite</p>
+                <div className="footer-links">
+                  <button 
+                    className="footer-link" 
+                    onClick={() => setShowDevTools(!showDevTools)}
+                  >
+                    🛠️ Ferramentas
+                  </button>
+                  <span className="footer-separator">•</span>
+                  <a href="#" className="footer-link" onClick={(e) => { e.preventDefault(); alert('Em breve!'); }}>
+                    📖 Documentação
+                  </a>
+                  <span className="footer-separator">•</span>
+                  <a href="#" className="footer-link" onClick={(e) => { e.preventDefault(); alert('Contato: suporte@estoqueapp.com'); }}>
+                    📧 Suporte
+                  </a>
+                </div>
+              </div>
+            </footer>
+          </div>
+        </BrowserRouter>
+      </AuthProvider>
+    </ProductsProvider>
   );
-};
+}
