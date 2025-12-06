@@ -1,4 +1,4 @@
-/* src/App.css - Design System Profissional Completo */
+/* src/App.css - Design System Profissional Completo - VERSÃO CORRIGIDA */
 :root {
   /* Cores principais */
   --primary: #4361ee;
@@ -70,7 +70,16 @@
   --z-toast: 600;
 }
 
-/* Reset e Base */
+/* ====== CORREÇÕES CRÍTICAS PARA SCROLL DUPLO ====== */
+/* RESET COMPLETO - Evita múltiplos viewports */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* ← IMPEDE SCROLL NO BODY */
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -87,17 +96,23 @@ body {
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
   color: var(--gray-800);
   line-height: 1.6;
-  min-height: 100vh;
+  height: 100vh; /* ← Garante altura total */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  position: fixed; /* ← FIXA O BODY, sem scroll */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
-/* Layout Principal */
+/* ====== LAYOUT PRINCIPAL CORRIGIDO ====== */
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh; /* ← Usa 100vh, não min-height */
   position: relative;
+  overflow: hidden; /* ← IMPEDE SCROLL NO APP */
 }
 
 /* Header Moderno */
@@ -109,6 +124,7 @@ body {
   top: 0;
   z-index: var(--z-sticky);
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0; /* ← Impede compressão */
 }
 
 .header-container {
@@ -223,6 +239,7 @@ body {
   padding: var(--space-md);
   animation: slideDown 0.3s ease;
   border-bottom: 3px solid var(--warning-dark);
+  flex-shrink: 0; /* ← Impede compressão */
 }
 
 @keyframes slideDown {
@@ -261,14 +278,23 @@ body {
   opacity: 0.9;
 }
 
-/* Main Content */
+/* ====== MAIN CONTENT CORRIGIDO ====== */
 .main {
-  flex: 1;
+  flex: 1; /* ← Ocupa espaço restante */
   padding: var(--space-xl);
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
   position: relative;
+  overflow-y: auto; /* ← APENAS AQUI TEM SCROLL */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Scroll suave no mobile */
+}
+
+/* Garante que os componentes dentro do main não tenham scroll próprio */
+.main > * {
+  overflow: visible !important;
+  max-height: none !important;
 }
 
 /* Cards Elegantes */
@@ -622,6 +648,7 @@ body {
   padding: var(--space-xl) 0;
   margin-top: auto;
   border-top: 3px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0; /* ← Impede compressão */
 }
 
 .footer-content {
@@ -759,6 +786,19 @@ body {
 .gap-2 { gap: var(--space-md); }
 .gap-3 { gap: var(--space-lg); }
 .gap-4 { gap: var(--space-xl); }
+
+/* ====== CORREÇÃO PARA SCROLL DUPLO NAS PÁGINAS ====== */
+/* Remove overflow automático de todos os elementos dentro do main */
+.main .card,
+.main .grid,
+.main .table-responsive,
+.main .sales-page-container,
+.main .products-container,
+.main .reports-container {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
 
 /* Responsividade */
 @media (max-width: 768px) {
