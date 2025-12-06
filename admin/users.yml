@@ -1,0 +1,5 @@
+﻿users:
+  - email: cliente1@example.com
+    name: Loja do João
+  - email: cliente2@example.com
+    name: Mercearia Maria

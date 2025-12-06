@@ -1,0 +1,37 @@
+﻿name: Create users on Supabase
+on:
+  push:
+    paths:
+      - "admin/users.yml"
+      - ".github/workflows/create-users.yml"
+
+jobs:
+  create-users:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: sudo snap install yq
+
+      - name: Read users and create on Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "Parsing users.yml..."
+          yq e '.users[]' admin/users.yml -o=json > /tmp/users.json
+          python3 - << 'PY'
+import os, json, requests, secrets
+url = os.environ['SUPABASE_URL']
+key = os.environ['SUPABASE_SERVICE_ROLE']
+with open('/tmp/users.json') as f:
+    users = json.load(f)
+for u in users:
+    email = u.get('email')
+    name = u.get('name', '')
+    pwd = secrets.token_urlsafe(12)
+    payload = {"email": email, "password": pwd, "options": {"email_confirm": True}, "user_metadata": {"name": name}}
+    r = requests.post(f"{url}/auth/v1/admin/users", json=payload, headers={'apikey': key, 'Authorization': f'Bearer {key}'})
+    print(email, r.status_code, r.text[:200])
+PY
