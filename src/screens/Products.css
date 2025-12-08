@@ -1,4 +1,3 @@
-/* src/screens/Products.css */
 .products-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -67,6 +66,9 @@
   min-width: 180px;
   transition: all var(--transition-base);
   cursor: pointer;
+  border: none;
+  text-align: left;
+  width: 100%;
 }
 
 .stat-card:hover {
@@ -336,6 +338,129 @@
   background: var(--gray-100);
   color: var(--gray-500);
   cursor: not-allowed;
+}
+
+/* ====== ESTILOS PARA UPLOAD DE IMAGEM ====== */
+
+.image-upload-container {
+  margin-top: var(--space-sm);
+}
+
+.image-upload-options {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.file-upload-wrapper {
+  position: relative;
+}
+
+.file-upload-wrapper input[type="file"] {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.image-preview-container {
+  margin-top: var(--space-md);
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  background: var(--gray-50);
+  text-align: center;
+}
+
+.image-preview {
+  max-width: 200px;
+  max-height: 200px;
+  margin: 0 auto var(--space-sm);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.image-info {
+  font-size: 0.8rem;
+  color: var(--gray-600);
+}
+
+/* ====== ESTILOS PARA MODAL DA CÂMERA ====== */
+
+.camera-modal {
+  max-width: 600px;
+}
+
+.camera-preview {
+  width: 100%;
+  background: black;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-md);
+  position: relative;
+  aspect-ratio: 4/3;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.camera-instructions {
+  background: var(--info-light);
+  border: 1px solid var(--info);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.camera-instructions p {
+  margin: 0;
+  color: var(--info-dark);
+  font-weight: 500;
+}
+
+.camera-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--gray-200);
+}
+
+.camera-error {
+  text-align: center;
+  padding: var(--space-xl);
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-md);
+  opacity: 0.7;
+}
+
+.camera-error h4 {
+  color: var(--danger);
+  margin-bottom: var(--space-sm);
+}
+
+.camera-error p {
+  color: var(--gray-600);
+  margin-bottom: var(--space-lg);
 }
 
 /* Form Stock Input Group */
@@ -632,11 +757,6 @@
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.image-preview {
-  margin-top: 8px;
-  max-width: 120px;
 }
 
 .product-main strong {
@@ -1173,6 +1293,20 @@
   .modal-stock-grid {
     grid-template-columns: 1fr;
   }
+  
+  /* Responsividade da câmera */
+  .camera-modal {
+    max-width: 90%;
+  }
+  
+  .camera-controls {
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .camera-controls .button {
+    width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1298,6 +1432,24 @@
     padding: var(--space-md);
     margin-bottom: var(--space-md);
   }
+  
+  /* Responsividade da câmera mobile */
+  .image-upload-options {
+    flex-direction: column;
+  }
+  
+  .image-upload-options .button {
+    width: 100%;
+  }
+  
+  .camera-modal {
+    width: 95%;
+    margin: 0 var(--space-sm);
+  }
+  
+  .camera-preview {
+    height: 300px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1390,6 +1542,16 @@
     padding: var(--space-sm) var(--space-md);
     font-size: 0.85rem;
   }
+  
+  /* Câmera em telas muito pequenas */
+  .camera-preview {
+    height: 250px;
+  }
+  
+  .camera-instructions {
+    padding: var(--space-sm);
+    font-size: 0.9rem;
+  }
 }
 
 /* ====== ANIMAÇÕES ====== */
@@ -1450,4 +1612,34 @@
   font-style: italic;
   color: var(--gray-600);
   margin-top: var(--space-sm);
+}
+
+/* ====== ANIMAÇÕES ADICIONAIS ====== */
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.camera-video {
+  animation: fadeIn 0.5s ease;
+}
+
+/* ====== INDICADOR DE CÂMERA ATIVA ====== */
+
+.camera-active::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 12px;
+  height: 12px;
+  background: var(--success);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+  box-shadow: 0 0 10px var(--success);
 }

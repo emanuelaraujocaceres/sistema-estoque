@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useState, useRef } from "react";
 import { getProducts, addProduct, updateProduct, deleteProduct, initDefaultProducts, exportData } from "../services/storage";
 import "./Products.css";
 
@@ -30,6 +30,13 @@ export default function Products() {
   const [bulkStockMode, setBulkStockMode] = useState(false);
   const [bulkStockUpdates, setBulkStockUpdates] = useState({});
   const [filter, setFilter] = useState("all");
+  
+  // Estados para a câmera
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraError, setCameraError] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -52,6 +59,104 @@ export default function Products() {
       setList([]);
     }
   }, []);
+
+  // ====== FUNÇÕES DA CÂMERA ======
+
+  // Iniciar câmera
+  const startCamera = async () => {
+    try {
+      setCameraError(null);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment', // Preferir câmera traseira
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false 
+      });
+      
+      setCameraStream(stream);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error('Erro ao acessar câmera:', err);
+      
+      // Fallback para câmera frontal se a traseira falhar
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true,
+          audio: false 
+        });
+        
+        setCameraStream(stream);
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (fallbackErr) {
+        console.error('Erro no fallback da câmera:', fallbackErr);
+        setCameraError('Não foi possível acessar a câmera. Verifique as permissões.');
+        showNotification('❌ Não foi possível acessar a câmera. Verifique as permissões.', 'error');
+      }
+    }
+  };
+
+  // Parar câmera
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    }
+  };
+
+  // Tirar foto
+  const takePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    // Ajustar o canvas para o tamanho do vídeo
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Desenhar o frame atual do vídeo no canvas
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Converter para data URL (base64)
+    const photoData = canvas.toDataURL('image/jpeg', 0.8);
+    
+    // Salvar no formulário
+    setForm(f => ({ ...f, image: photoData }));
+    
+    // Parar câmera e fechar modal
+    stopCamera();
+    setShowCameraModal(false);
+    
+    showNotification('✅ Foto capturada com sucesso!', 'success');
+  };
+
+  // Abrir modal da câmera
+  const openCameraModal = () => {
+    setShowCameraModal(true);
+    setTimeout(() => {
+      startCamera();
+    }, 100);
+  };
+
+  // Fechar modal da câmera
+  const closeCameraModal = () => {
+    stopCamera();
+    setShowCameraModal(false);
+    setCameraError(null);
+  };
 
   // ====== FUNÇÕES DE ESTOQUE ======
 
@@ -239,26 +344,32 @@ export default function Products() {
     }, 3000);
   };
 
-    // Converter arquivo de imagem para base64 e salvar no formulário
-    function handleImageChange(e) {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
+  // Converter arquivo de imagem para base64
+  const handleImageChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
 
-      if (!file.type.startsWith('image/')) {
-        setError('Por favor, selecione um arquivo de imagem válido');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        setForm(f => ({ ...f, image: reader.result }));
-      };
-      reader.onerror = (err) => {
-        console.error('Erro ao ler arquivo de imagem:', err);
-        setError('Erro ao processar a imagem');
-      };
-      reader.readAsDataURL(file);
+    if (!file.type.startsWith('image/')) {
+      setError('Por favor, selecione um arquivo de imagem válido');
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm(f => ({ ...f, image: reader.result }));
+    };
+    reader.onerror = (err) => {
+      console.error('Erro ao ler arquivo de imagem:', err);
+      setError('Erro ao processar a imagem');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Remover imagem
+  const removeImage = () => {
+    setForm(f => ({ ...f, image: "" }));
+    showNotification('Imagem removida', 'info');
+  };
 
   // ====== FUNÇÕES EXISTENTES ======
 
@@ -669,19 +780,56 @@ export default function Products() {
 
           <div className="form-group">
             <label>Imagem do Produto</label>
-            <input
-              className="input"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              disabled={loading}
-            />
-            {form.image && (
-              <div className="image-preview">
-                <img src={form.image} alt="Pré-visualização" />
+            <div className="image-upload-container">
+              <div className="image-upload-options">
+                <button 
+                  type="button"
+                  className="button btn-secondary btn-sm"
+                  onClick={openCameraModal}
+                  disabled={loading}
+                >
+                  📷 Tirar Foto
+                </button>
+                
+                <div className="file-upload-wrapper">
+                  <label className="button btn-secondary btn-sm">
+                    📁 Selecionar Arquivo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      disabled={loading}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </div>
+                
+                {form.image && (
+                  <button 
+                    type="button"
+                    className="button btn-danger btn-sm"
+                    onClick={removeImage}
+                    disabled={loading}
+                  >
+                    🗑️ Remover
+                  </button>
+                )}
               </div>
-            )}
-            <small className="helper-text">Opcional — será exibida como miniatura na lista</small>
+              
+              {form.image && (
+                <div className="image-preview-container">
+                  <div className="image-preview">
+                    <img src={form.image} alt="Pré-visualização" />
+                  </div>
+                  <div className="image-info">
+                    <small>Pré-visualização da imagem</small>
+                  </div>
+                </div>
+              )}
+            </div>
+            <small className="helper-text">
+              Opcional — será exibida como miniatura na lista
+            </small>
           </div>
 
           <div className="form-group">
@@ -1098,7 +1246,96 @@ export default function Products() {
         )}
       </div>
 
-      {/* Resumo de valor do estoque removido daqui — ficará disponível apenas em Relatórios */}
+      {/* Modal da Câmera */}
+      {showCameraModal && (
+        <div className="modal-overlay" onClick={closeCameraModal}>
+          <div className="modal-content camera-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📷 Tirar Foto do Produto</h3>
+              <button className="modal-close" onClick={closeCameraModal}>
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {cameraError ? (
+                <div className="camera-error">
+                  <div className="error-icon">⚠️</div>
+                  <h4>Erro ao acessar câmera</h4>
+                  <p>{cameraError}</p>
+                  <button 
+                    className="button btn-secondary"
+                    onClick={startCamera}
+                  >
+                    🔄 Tentar novamente
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="camera-preview">
+                    <video 
+                      ref={videoRef}
+                      autoPlay 
+                      playsInline
+                      className="camera-video"
+                    ></video>
+                    <canvas 
+                      ref={canvasRef}
+                      style={{ display: 'none' }}
+                    ></canvas>
+                  </div>
+                  
+                  <div className="camera-instructions">
+                    <p>📸 Posicione o produto dentro do quadro e clique em "Tirar Foto"</p>
+                  </div>
+                  
+                  <div className="camera-controls">
+                    <button 
+                      className="button btn-secondary"
+                      onClick={() => {
+                        if (cameraStream) {
+                          // Trocar câmera
+                          stopCamera();
+                          setTimeout(() => {
+                            const constraints = { 
+                              video: { 
+                                facingMode: cameraStream.getVideoTracks()[0].getSettings().facingMode === 'user' ? 'environment' : 'user'
+                              },
+                              audio: false 
+                            };
+                            
+                            navigator.mediaDevices.getUserMedia(constraints)
+                              .then(newStream => {
+                                setCameraStream(newStream);
+                                if (videoRef.current) {
+                                  videoRef.current.srcObject = newStream;
+                                }
+                              })
+                              .catch(err => {
+                                console.error('Erro ao trocar câmera:', err);
+                                setCameraError('Não foi possível trocar a câmera');
+                              });
+                          }, 100);
+                        }
+                      }}
+                    >
+                      🔄 Trocar Câmera
+                    </button>
+                    
+                    <button 
+                      className="button btn-primary btn-lg"
+                      onClick={takePhoto}
+                      disabled={!cameraStream}
+                    >
+                      📸 Tirar Foto
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal para adicionar estoque */}
       {showStockModal && stockModalProduct && (
