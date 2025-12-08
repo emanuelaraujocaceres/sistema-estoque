@@ -66,6 +66,23 @@ export default function Products() {
   const startCamera = async () => {
     try {
       setCameraError(null);
+      
+      // Pedir permissão de câmera de forma explícita
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError('Seu navegador não suporta acesso à câmera.');
+        showNotification('❌ Seu navegador não suporta acesso à câmera.', 'error');
+        return;
+      }
+      
+      // Mostrar aviso ao usuário
+      const permissionConfirmed = window.confirm(
+        '🎥 O aplicativo pedirá acesso à sua câmera.\n\nClique em "Permitir" quando solicitado para usar a câmera do seu dispositivo.'
+      );
+      
+      if (!permissionConfirmed) {
+        return;
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'environment', // Preferir câmera traseira
@@ -80,6 +97,8 @@ export default function Products() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
+      
+      showNotification('✅ Câmera ativada com sucesso!', 'success');
     } catch (err) {
       console.error('Erro ao acessar câmera:', err);
       
@@ -95,10 +114,22 @@ export default function Products() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
+        
+        showNotification('✅ Câmera ativada com sucesso!', 'success');
       } catch (fallbackErr) {
         console.error('Erro no fallback da câmera:', fallbackErr);
-        setCameraError('Não foi possível acessar a câmera. Verifique as permissões.');
-        showNotification('❌ Não foi possível acessar a câmera. Verifique as permissões.', 'error');
+        
+        // Mensagem específica de acordo com o erro
+        let errorMessage = 'Não foi possível acessar a câmera.';
+        
+        if (fallbackErr.name === 'NotAllowedError') {
+          errorMessage = '🚫 Permissão de câmera negada. Você precisa permitir o acesso na configuração do seu navegador/dispositivo.';
+        } else if (fallbackErr.name === 'NotFoundError') {
+          errorMessage = '❌ Nenhuma câmera foi encontrada no seu dispositivo.';
+        }
+        
+        setCameraError(errorMessage);
+        showNotification(errorMessage, 'error');
       }
     }
   };
@@ -1188,17 +1219,7 @@ export default function Products() {
                             </div>
                             <small>Adicionar: {bulkQuantity} unidades</small>
                           </div>
-                        ) : (
-                          <div className="quick-stock-controls">
-                            <button 
-                              className="button btn-sm btn-info"
-                              onClick={() => handleRestock(p.id, p.name)}
-                              title="Repor estoque"
-                            >
-                              ➕ Repor Estoque
-                            </button>
-                          </div>
-                        )}
+                        ) : null}
                       </td>
                       
                       <td className="status-cell">

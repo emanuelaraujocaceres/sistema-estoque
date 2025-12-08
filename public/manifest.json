@@ -8,6 +8,10 @@
   "theme_color": "#2c7a7b",
   "orientation": "portrait",
   "scope": "/",
+  "permissions": [
+    "camera",
+    "microphone"
+  ],
   "icons": [
     {
       "src": "/icon-72x72.png",

@@ -1,5 +1,6 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { getSales, getProducts, exportData } from "../services/storage";
+import html2pdf from "html2pdf.js";
 import "./Reports.css";
 
 function Reports() {
@@ -11,6 +12,7 @@ function Reports() {
   const [dateRange, setDateRange] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const reportRef = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -163,6 +165,26 @@ function Reports() {
     );
   }
 
+  const exportToPDF = async () => {
+    if (!reportRef.current) return;
+    
+    try {
+      const element = reportRef.current;
+      const opt = {
+        margin: 10,
+        filename: `relatorio_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+      };
+      
+      html2pdf().set(opt).from(element).save();
+    } catch (err) {
+      console.error("Erro ao exportar PDF:", err);
+      alert("Erro ao gerar PDF. Tente novamente.");
+    }
+  };
+
   if (error) {
     return (
       <div className="reports-container">
@@ -178,7 +200,7 @@ function Reports() {
   }
 
   return (
-    <div className="reports-container">
+    <div className="reports-container" ref={reportRef}>
       {/* Header */}
       <div className="reports-header">
         <h1>📊 Relatórios e Análises</h1>
@@ -188,7 +210,7 @@ function Reports() {
           <button className="button btn-secondary" onClick={loadData}>
             🔄 Atualizar Dados
           </button>
-          <button className="button btn-primary" onClick={exportData}>
+          <button className="button btn-primary" onClick={exportToPDF}>
             📤 Exportar Relatório
           </button>
         </div>
@@ -489,51 +511,6 @@ function Reports() {
             )}
           </div>
         )}
-      </div>
-
-      {/* Estatísticas Detalhadas */}
-      <div className="card stats-card">
-        <h2>📈 Estatísticas Detalhadas</h2>
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon">📊</div>
-            <div className="stat-content">
-              <div className="stat-title">Total de Vendas</div>
-              <div className="stat-value">{totalSalesCount}</div>
-            </div>
-          </div>
-          
-          <div className="stat-card">
-            <div className="stat-icon">📦</div>
-            <div className="stat-content">
-              <div className="stat-title">Total de Produtos</div>
-              <div className="stat-value">{products.length}</div>
-            </div>
-          </div>
-          
-          <div className="stat-card">
-            <div className="stat-icon">💰</div>
-            <div className="stat-content">
-              <div className="stat-title">Ticket Médio</div>
-              <div className="stat-value">
-                R$ {totalSalesCount > 0 ? (totalSold / totalSalesCount).toFixed(2) : "0.00"}
-              </div>
-            </div>
-          </div>
-          
-          <div className="stat-card">
-            <div className="stat-icon">📅</div>
-            <div className="stat-content">
-              <div className="stat-title">Período</div>
-              <div className="stat-value">
-                {dateRange === 'all' ? 'Todo período' : 
-                 dateRange === 'today' ? 'Hoje' :
-                 dateRange === 'week' ? '7 dias' :
-                 dateRange === 'month' ? '30 dias' : '365 dias'}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
