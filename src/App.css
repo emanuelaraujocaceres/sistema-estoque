@@ -1,4 +1,4 @@
-/* src/App.css - Design System Profissional Completo - VERSÃO FINAL */
+/* src/App.css - Design System Profissional Completo - MENU ATUALIZADO */
 :root {
   /* Cores principais */
   --primary: #4361ee;
@@ -90,7 +90,6 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* IMPORTANTE: NÃO use overflow: hidden aqui - permite pull-to-refresh */
   overflow-x: hidden; /* Apenas horizontal */
 }
 
@@ -109,7 +108,7 @@ body {
   width: 100%;
 }
 
-/* Header Moderno */
+/* ====== HEADER COM MENU GRANDE ====== */
 .header {
   background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   color: white;
@@ -119,132 +118,90 @@ body {
   z-index: var(--z-sticky);
   border-bottom: 3px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
+  min-height: 80px; /* ALTURA MAIOR */
+  display: flex;
+  align-items: center;
 }
 
 .header-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 var(--space-lg);
+  width: 100%;
+  margin: 0;
+  padding: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md) 0;
-  flex: 0 1 auto;
-}
-
-.menu-toggle {
-  display: none;
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: var(--space-sm);
-  border-radius: var(--radius-sm);
-  transition: background-color var(--transition-fast);
-}
-
-.menu-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.header h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  white-space: nowrap;
-}
-
-/* Navegação - SEMPRE HORIZONTAL */
+/* 🔥 MENU PRINCIPAL - 4 ITENS IGUAIS */
 .header-nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 4 COLUNAS IGUAIS */
   gap: var(--space-sm);
-  padding: var(--space-sm) 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-  flex: 1 1 auto;
-  min-width: 0;
+  padding: var(--space-md);
+  width: 100%;
+  max-width: 1400px;
+  text-align: center;
 }
 
-.header-nav::-webkit-scrollbar {
-  height: 4px;
-}
-
-.header-nav::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.header-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-}
-
-.header-nav::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-
+/* 🔥 ITENS DO MENU GRANDES E VISÍVEIS */
 .nav-link {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-sm);
-  color: rgba(255, 255, 255, 0.9);
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-lg) var(--space-md);
+  color: rgba(255, 255, 255, 0.95);
   text-decoration: none;
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  font-weight: 500;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
   transition: all var(--transition-base);
   white-space: nowrap;
-  position: relative;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  font-size: 1.1rem; /* TEXTO MAIOR */
+  min-height: 70px;
 }
 
 .nav-link:hover,
 .nav-link:focus {
-  background: rgba(255, 255, 255, 0.15);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .nav-link.active {
-  background: rgba(255, 255, 255, 0.2);
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-weight: 700;
 }
 
 .nav-link.active::after {
   content: '';
   position: absolute;
-  bottom: -4px;
+  bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
-  width: 60%;
+  width: 40%;
   height: 3px;
   background: white;
   border-radius: var(--radius-full);
 }
 
+/* 🔥 ÍCONES GRANDES */
 .nav-icon {
-  font-size: 1.1rem;
+  font-size: 1.6rem; /* ÍCONES GRANDES */
+  margin-bottom: 4px;
+  display: block;
 }
 
+/* Remover o divisor entre itens */
 .nav-divider {
-  width: 1px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 0 var(--space-sm);
-  align-self: stretch;
+  display: none;
 }
 
+/* Botão de ferramentas de desenvolvimento - manter apenas se necessário */
 .dev-tools-btn {
   background: rgba(255, 158, 0, 0.2) !important;
   border-color: rgba(255, 158, 0, 0.3) !important;
@@ -798,38 +755,32 @@ body {
 .gap-4 { gap: var(--space-xl); }
 
 /* ====== CORREÇÃO PARA PULL-TO-REFRESH ====== */
-/* Remove qualquer overflow do body que bloqueie scroll */
 body {
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
 }
 
-/* Responsividade */
+/* ====== RESPONSIVIDADE ====== */
+
+/* Tablet */
 @media (max-width: 1024px) {
   html {
     font-size: 15px;
   }
   
-  .header-container {
-    padding: 0 var(--space-md);
-    gap: var(--space-sm);
-  }
-  
-  .header h1 {
-    font-size: 1.25rem;
-  }
-  
   .header-nav {
     gap: var(--space-xs);
+    padding: var(--space-sm);
   }
   
   .nav-link {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: 0.9rem;
+    padding: var(--space-md) var(--space-sm);
+    font-size: 1rem;
+    min-height: 60px;
   }
   
   .nav-icon {
-    font-size: 0.95rem;
+    font-size: 1.4rem;
   }
   
   .main {
@@ -841,38 +792,29 @@ body {
   }
 }
 
+/* Mobile Grande */
 @media (max-width: 768px) {
   html {
     font-size: 14px;
   }
   
-  .header-container {
-    padding: 0 var(--space-sm);
-    gap: var(--space-xs);
-  }
-  
-  .header h1 {
-    font-size: 1.1rem;
-    flex-shrink: 0;
-  }
-  
+  /* Mantém 4 colunas mas ajusta padding */
   .header-nav {
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--space-xs);
-    padding: var(--space-xs) 0;
+    padding: var(--space-xs);
   }
   
   .nav-link {
-    padding: var(--space-xs) var(--space-sm);
-    font-size: 0.85rem;
-    flex-shrink: 0;
+    padding: var(--space-sm) var(--space-xs);
+    font-size: 0.9rem;
+    min-height: 50px;
+    border-radius: var(--radius-md);
   }
   
   .nav-icon {
-    font-size: 0.9rem;
-  }
-  
-  .nav-divider {
-    flex-shrink: 0;
+    font-size: 1.2rem;
+    margin-bottom: 2px;
   }
   
   .main {
@@ -888,45 +830,41 @@ body {
     padding: var(--space-md) var(--space-lg);
     font-size: 0.9rem;
   }
-  
-  .dev-tools-buttons {
-    flex-direction: column;
-  }
 }
 
+/* Mobile Pequeno */
 @media (max-width: 480px) {
   html {
     font-size: 13px;
   }
   
-  .header h1 {
-    font-size: 1rem;
-    flex-shrink: 0;
-  }
-  
+  /* Em telas muito pequenas, mantém 4 colunas com texto menor */
   .header-nav {
-    gap: var(--space-xs);
-    padding: var(--space-xs) 0;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    padding: 6px;
   }
   
   .nav-link {
-    padding: var(--space-xs) var(--space-xs);
-    font-size: 0.8rem;
-    flex-shrink: 0;
-    gap: var(--space-xs);
-  }
-  
-  .nav-link span:last-child {
-    display: none;
+    padding: var(--space-xs) 2px;
+    font-size: 0.75rem;
+    min-height: 45px;
+    border-radius: var(--radius-sm);
   }
   
   .nav-icon {
-    font-size: 1.1rem;
+    font-size: 1rem;
+    margin-bottom: 1px;
   }
   
-  .nav-divider {
-    flex-shrink: 0;
-    width: 1px;
+  /* Opcional: Mostrar apenas ícones em telas muito pequenas */
+  @media (max-width: 360px) {
+    .nav-link span:not(.nav-icon) {
+      font-size: 0.7rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
   }
   
   .main {
@@ -949,18 +887,9 @@ body {
     padding: var(--space-sm);
   }
   
-  .footer-content {
-    padding: 0 var(--space-sm);
-  }
-  
   .button {
     padding: var(--space-sm) var(--space-md);
     font-size: 0.85rem;
-  }
-  
-  .button.btn-primary,
-  .button.btn-success {
-    width: 100%;
   }
 }
 
