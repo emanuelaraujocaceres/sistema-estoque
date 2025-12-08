@@ -279,23 +279,25 @@ function Reports() {
           </div>
           
           {topProducts().length > 0 ? (
-            <div className="top-products-list">
-              {topProducts().map((product, index) => (
-                <div key={product.id} className="top-product-item">
-                  <div className="product-rank">
-                    <span className={`rank-badge rank-${index + 1}`}>
-                      #{index + 1}
-                    </span>
-                  </div>
-                  <div className="product-info">
-                    <div className="product-name">{product.name}</div>
-                    <div className="product-stats">
-                      <span className="stat-qty">{product.totalQty} unidades</span>
-                      <span className="stat-revenue">R$ {product.totalRevenue.toFixed(2)}</span>
+            <div className="top-products-list-container">
+              <div className="top-products-list">
+                {topProducts().map((product, index) => (
+                  <div key={product.id} className="top-product-item">
+                    <div className="product-rank">
+                      <span className={`rank-badge rank-${index + 1}`}>
+                        #{index + 1}
+                      </span>
+                    </div>
+                    <div className="product-info">
+                      <div className="product-name">{product.name}</div>
+                      <div className="product-stats">
+                        <span className="stat-qty">{product.totalQty} unidades</span>
+                        <span className="stat-revenue">R$ {product.totalRevenue.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <div className="empty-state">
@@ -362,65 +364,67 @@ function Reports() {
               <p className="empty-subtitle">As vendas aparecerão aqui automaticamente</p>
             </div>
           ) : (
-            <div className="sales-history">
-              <div className="table-responsive">
-                <table className="table sales-table">
-                  <thead>
-                    <tr>
-                      <th>Data/Hora</th>
-                      <th>Itens</th>
-                      <th>Total</th>
-                      <th>Pagamento</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedSales.map(sale => {
-                      const saleDate = new Date(sale.created_at || sale.timestamp || Date.now());
-                      const itemsCount = sale.items?.length || 0;
-                      
-                      return (
-                        <tr key={sale.id}>
-                          <td className="sale-date">
-                            <div className="sale-date-main">
-                              {saleDate.toLocaleDateString('pt-BR')}
-                            </div>
-                            <div className="sale-time">
-                              {saleDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          </td>
-                          <td className="sale-items">
-                            <div className="items-count">
-                              {itemsCount} {itemsCount === 1 ? 'item' : 'itens'}
-                            </div>
-                            <div className="items-preview">
-                              {sale.items?.slice(0, 2).map(item => (
-                                <span key={item.productId} className="item-tag">
-                                  {item.name?.substring(0, 15) || 'Produto'}
-                                  {item.name && item.name.length > 15 ? '...' : ''}
-                                </span>
-                              ))}
-                              {itemsCount > 2 && (
-                                <span className="item-tag more">+{itemsCount - 2}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="sale-total">
-                            <strong>R$ {Number(sale.total || 0).toFixed(2)}</strong>
-                          </td>
-                          <td className="sale-payment">
-                            <span className={`payment-badge payment-${sale.paymentMethod}`}>
-                              {sale.paymentMethod === 'dinheiro' && '💵'}
-                              {sale.paymentMethod === 'pix' && '🏦'}
-                              {sale.paymentMethod === 'cartao_credito' && '💳'}
-                              {sale.paymentMethod === 'cartao_debito' && '💳'}
-                              {sale.paymentMethod || '❓'}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            <div className="sales-history-container">
+              <div className="sales-history">
+                <div className="sales-table-responsive">
+                  <table className="sales-table">
+                    <thead>
+                      <tr>
+                        <th>Data/Hora</th>
+                        <th>Itens</th>
+                        <th>Total</th>
+                        <th>Pagamento</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedSales.map(sale => {
+                        const saleDate = new Date(sale.created_at || sale.timestamp || Date.now());
+                        const itemsCount = sale.items?.length || 0;
+                        
+                        return (
+                          <tr key={sale.id}>
+                            <td className="sale-date">
+                              <div className="sale-date-main">
+                                {saleDate.toLocaleDateString('pt-BR')}
+                              </div>
+                              <div className="sale-time">
+                                {saleDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </td>
+                            <td className="sale-items">
+                              <div className="items-count">
+                                {itemsCount} {itemsCount === 1 ? 'item' : 'itens'}
+                              </div>
+                              <div className="items-preview">
+                                {sale.items?.slice(0, 2).map(item => (
+                                  <span key={item.productId} className="item-tag">
+                                    {item.name?.substring(0, 15) || 'Produto'}
+                                    {item.name && item.name.length > 15 ? '...' : ''}
+                                  </span>
+                                ))}
+                                {itemsCount > 2 && (
+                                  <span className="item-tag more">+{itemsCount - 2}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="sale-total">
+                              <strong>R$ {Number(sale.total || 0).toFixed(2)}</strong>
+                            </td>
+                            <td className="sale-payment">
+                              <span className={`payment-badge payment-${sale.paymentMethod}`}>
+                                {sale.paymentMethod === 'dinheiro' && '💵'}
+                                {sale.paymentMethod === 'pix' && '🏦'}
+                                {sale.paymentMethod === 'cartao_credito' && '💳'}
+                                {sale.paymentMethod === 'cartao_debito' && '💳'}
+                                {sale.paymentMethod || '❓'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
               
               <div className="sales-footer">
