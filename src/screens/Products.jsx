@@ -40,10 +40,39 @@ export default function Products() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
+  // Funções auxiliares para sincronização direta com localStorage
+  const getProductsDirectly = () => {
+    try {
+      const data = localStorage.getItem('products');
+      if (!data) return [];
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.error('Erro ao carregar produtos do localStorage:', error);
+      return [];
+    }
+  };
+
+  const saveProductsDirectly = (products) => {
+    try {
+      localStorage.setItem('products', JSON.stringify(products));
+      return true;
+    } catch (error) {
+      console.error('Erro ao salvar produtos no localStorage:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     try {
       initDefaultProducts();
-      const products = getProducts();
+      
+      // Carrega produtos diretamente do localStorage
+      const products = getProductsDirectly();
+      
+      console.log('Produtos carregados (diretamente):', products);
+      console.log('Dados brutos do localStorage:', localStorage.getItem('products'));
+      
       if (!Array.isArray(products)) {
         throw new Error("Dados de produtos inválidos");
       }
@@ -51,7 +80,9 @@ export default function Products() {
       
       const initialUpdates = {};
       products.forEach(p => {
-        initialUpdates[p.id] = 0;
+        if (p && p.id) {
+          initialUpdates[p.id] = 0;
+        }
       });
       setBulkStockUpdates(initialUpdates);
     } catch (error) {
@@ -280,26 +311,49 @@ export default function Products() {
     applyStockUpdate(productId, quantity);
   };
 
+  // FUNÇÃO CORRIGIDA: applyStockUpdate
   const applyStockUpdate = (productId, quantity) => {
-    const products = getProducts();
-    const updatedProducts = products.map(p => {
-      if (p.id === productId) {
-        const newStock = p.stock + quantity;
-        return {
-          ...p,
-          stock: Math.max(0, newStock),
-          updated_at: new Date().toISOString()
-        };
+    try {
+      // 1. Carrega produtos diretamente do localStorage
+      const products = getProductsDirectly();
+      
+      // 2. Atualiza o produto específico
+      const updatedProducts = products.map(p => {
+        if (p.id === productId) {
+          const currentStock = Number(p.stock) || 0;
+          const newStock = Math.max(0, currentStock + quantity);
+          
+          return {
+            ...p,
+            stock: newStock,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return p;
+      });
+      
+      // 3. Salva NOVAMENTE no localStorage
+      saveProductsDirectly(updatedProducts);
+      
+      // 4. Atualiza o estado local
+      setList(updatedProducts);
+      
+      // 5. Atualiza o bulkStockUpdates se estiver no modo massa
+      if (bulkStockMode) {
+        setBulkStockUpdates(prev => ({
+          ...prev,
+          [productId]: 0 // Reseta para 0 após aplicar
+        }));
       }
-      return p;
-    });
-    
-    localStorage.setItem('products', JSON.stringify(updatedProducts));
-    setList(updatedProducts);
-    
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      showNotification(`✅ ${quantity} unidades adicionadas ao estoque de "${product.name}"!`, 'success');
+      
+      // 6. Mostra notificação
+      const updatedProduct = updatedProducts.find(p => p.id === productId);
+      if (updatedProduct) {
+        showNotification(`✅ ${quantity} unidades adicionadas ao estoque de "${updatedProduct.name}"!`, 'success');
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar estoque:', error);
+      showNotification('❌ Erro ao atualizar estoque', 'error');
     }
   };
 
@@ -308,7 +362,9 @@ export default function Products() {
     if (!bulkStockMode) {
       const initialUpdates = {};
       list.forEach(p => {
-        initialUpdates[p.id] = 0;
+        if (p && p.id) {
+          initialUpdates[p.id] = 0;
+        }
       });
       setBulkStockUpdates(initialUpdates);
     }
@@ -321,37 +377,59 @@ export default function Products() {
     }));
   };
 
+  // FUNÇÃO CORRIGIDA: applyBulkStock
   const applyBulkStock = () => {
-    const hasUpdates = Object.values(bulkStockUpdates).some(val => val > 0);
-    if (!hasUpdates) {
-      showNotification("⚠️ Nenhuma alteração de estoque foi feita.", 'warning');
-      return;
-    }
-
-    const products = getProducts();
-    const updatedProducts = products.map(p => {
-      const addQty = bulkStockUpdates[p.id] || 0;
-      if (addQty > 0) {
-        return {
-          ...p,
-          stock: p.stock + addQty,
-          updated_at: new Date().toISOString()
-        };
+    try {
+      const hasUpdates = Object.values(bulkStockUpdates).some(val => val > 0);
+      if (!hasUpdates) {
+        showNotification("⚠️ Nenhuma alteração de estoque foi feita.", 'warning');
+        return;
       }
-      return p;
-    });
-    
-    localStorage.setItem('products', JSON.stringify(updatedProducts));
-    setList(updatedProducts);
-    
-    setBulkStockMode(false);
-    const resetUpdates = {};
-    updatedProducts.forEach(p => {
-      resetUpdates[p.id] = 0;
-    });
-    setBulkStockUpdates(resetUpdates);
-    
-    showNotification(`✅ Estoque atualizado em ${Object.values(bulkStockUpdates).filter(v => v > 0).length} produtos!`, 'success');
+
+      // 1. Carrega produtos diretamente do localStorage
+      const products = getProductsDirectly();
+      
+      // 2. Aplica todas as atualizações
+      const updatedProducts = products.map(p => {
+        const addQty = bulkStockUpdates[p.id] || 0;
+        if (addQty > 0) {
+          const currentStock = Number(p.stock) || 0;
+          const newStock = Math.max(0, currentStock + addQty);
+          
+          return {
+            ...p,
+            stock: newStock,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return p;
+      });
+      
+      // 3. Salva NOVAMENTE no localStorage
+      saveProductsDirectly(updatedProducts);
+      
+      // 4. Atualiza o estado local
+      setList(updatedProducts);
+      
+      // 5. Sair do modo massa
+      setBulkStockMode(false);
+      
+      // 6. Resetar atualizações
+      const resetUpdates = {};
+      updatedProducts.forEach(p => {
+        if (p && p.id) {
+          resetUpdates[p.id] = 0;
+        }
+      });
+      setBulkStockUpdates(resetUpdates);
+      
+      // 7. Mostra notificação
+      const updatedCount = Object.values(bulkStockUpdates).filter(v => v > 0).length;
+      showNotification(`✅ Estoque atualizado em ${updatedCount} produtos!`, 'success');
+    } catch (error) {
+      console.error('Erro ao aplicar estoque em massa:', error);
+      showNotification('❌ Erro ao aplicar estoque em massa', 'error');
+    }
   };
 
   const showNotification = (message, type = 'info') => {
@@ -502,13 +580,17 @@ export default function Products() {
         updated_at: new Date().toISOString()
       };
       
+      // Usa a função do storage, mas também sincroniza diretamente
       const newProduct = addProduct(prod);
       
       if (!newProduct) {
         throw new Error("Falha ao adicionar produto");
       }
       
-      setList(getProducts());
+      // Atualiza a lista sincronizando com localStorage
+      const updatedProducts = getProductsDirectly();
+      setList(updatedProducts);
+      
       setForm(emptyForm());
       setError(null);
       
@@ -531,7 +613,9 @@ export default function Products() {
         cost: p.cost?.toString() || "",
         stock: p.stock?.toString() || "",
         min_stock: p.min_stock?.toString() || "",
-        image: p.image || ""
+        image: p.image || "",
+        saleType: p.saleType || "unit",
+        pricePerKilo: p.pricePerKilo || ""
       });
       setEditing(true);
       setError(null);
@@ -559,6 +643,8 @@ export default function Products() {
         cost: Number(form.cost) || 0,
         stock: Math.max(0, Number(form.stock) || 0),
         min_stock: Math.max(0, Number(form.min_stock) || 0),
+        saleType: form.saleType || "unit",
+        pricePerKilo: form.saleType === "weight" ? Number(form.pricePerKilo) || 0 : undefined,
         updated_at: new Date().toISOString()
       };
       
@@ -568,7 +654,10 @@ export default function Products() {
         throw new Error("Falha ao atualizar produto");
       }
       
-      setList(getProducts());
+      // Atualiza a lista sincronizando com localStorage
+      const updatedProducts = getProductsDirectly();
+      setList(updatedProducts);
+      
       setForm(emptyForm());
       setEditing(false);
       setError(null);
@@ -598,7 +687,10 @@ export default function Products() {
         throw new Error("Falha ao excluir produto");
       }
       
-      setList(getProducts());
+      // Atualiza a lista sincronizando com localStorage
+      const updatedProducts = getProductsDirectly();
+      setList(updatedProducts);
+      
       showNotification(`🗑️ Produto "${name}" excluído com sucesso!`, 'warning');
     } catch (error) {
       console.error("Erro ao excluir produto:", error);
@@ -775,7 +867,9 @@ export default function Products() {
               onClick={() => {
                 const resetUpdates = {};
                 list.forEach(p => {
-                  resetUpdates[p.id] = 0;
+                  if (p && p.id) {
+                    resetUpdates[p.id] = 0;
+                  }
                 });
                 setBulkStockUpdates(resetUpdates);
               }}
@@ -1095,7 +1189,10 @@ export default function Products() {
           <div className="controls-actions">
             <button 
               className="button btn-secondary" 
-              onClick={() => setList(getProducts())}
+              onClick={() => {
+                const updatedProducts = getProductsDirectly();
+                setList(updatedProducts);
+              }}
               disabled={loading}
             >
               🔄 Atualizar

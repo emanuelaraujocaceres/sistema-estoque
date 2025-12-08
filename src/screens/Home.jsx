@@ -43,12 +43,46 @@ export default function Home() {
     }
   }, [user]);
 
+  // Função para comprimir imagem (CRÍTICO para o Supabase)
+  const compressImage = (base64Image, maxWidth = 400, quality = 0.7) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = base64Image;
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Calcular novas dimensões mantendo proporção
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Desenhar imagem comprimida
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Converter para base64 com qualidade reduzida
+        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedBase64);
+      };
+      
+      img.onerror = reject;
+    });
+  };
+
   // Funções de logout
   async function handleLogout() {
     if (window.confirm("Tem certeza que deseja sair da sua conta?")) {
       try {
         await supabase.auth.signOut();
-        localStorage.removeItem('user_avatar'); // Limpa o avatar do localStorage
+        localStorage.removeItem('user_avatar');
         navigate("/login");
       } catch (error) {
         console.error("Erro ao fazer logout:", error);
@@ -57,39 +91,98 @@ export default function Home() {
     }
   }
 
-  // Função para atualizar o avatar
+  // Função para atualizar o avatar CORRIGIDA
   async function updateAvatar(base64Image) {
     try {
       setUploadingAvatar(true);
       
-      // Salva localmente primeiro para feedback imediato
-      localStorage.setItem('user_avatar', base64Image);
-      setAvatarUrl(base64Image);
+      // Verificar se o usuário está autenticado
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
       
-      // Tenta atualizar no Supabase
-      const { error } = await supabase.auth.updateUser({ 
+      // Verificar se a sessão do Supabase é válida
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        throw new Error(`Erro de sessão: ${sessionError.message}`);
+      }
+      
+      if (!sessionData.session) {
+        throw new Error("Sessão expirada. Faça login novamente.");
+      }
+      
+      // Comprimir a imagem ANTES de salvar (CRÍTICO)
+      console.log("Tamanho original (base64):", base64Image.length, "caracteres");
+      const compressedImage = await compressImage(base64Image);
+      console.log("Tamanho comprimido (base64):", compressedImage.length, "caracteres");
+      
+      // Verificar se não é muito grande (limite do Supabase ~ 1KB para user_metadata)
+      if (compressedImage.length > 100000) { // ~100KB
+        console.warn("Imagem muito grande mesmo após compressão:", compressedImage.length);
+        // Salva apenas localmente e mostra aviso
+        localStorage.setItem('user_avatar', compressedImage);
+        setAvatarUrl(compressedImage);
+        alert('✅ Foto salva localmente!\n⚠️ Imagem muito grande para sincronizar com a nuvem.\nRecomendado: Use uma imagem menor ou entre em contato com o suporte.');
+        return;
+      }
+      
+      // Salva localmente primeiro para feedback imediato
+      localStorage.setItem('user_avatar', compressedImage);
+      setAvatarUrl(compressedImage);
+      
+      console.log("Tentando atualizar avatar no Supabase...");
+      
+      // Tenta atualizar no Supabase - FORMA CORRETA
+      const { data, error } = await supabase.auth.updateUser({
         data: { 
-          ...user?.user_metadata,
-          avatar: base64Image 
-        } 
+          ...(user.user_metadata || {}), // Mantém os metadados existentes
+          avatar: compressedImage 
+        }
       });
       
       if (error) {
-        console.warn('Aviso: Avatar salvo apenas localmente:', error.message);
-        alert('✅ Foto salva localmente! Nota: Não foi possível sincronizar com a nuvem.');
-      } else {
+        console.error("Erro do Supabase:", error);
+        
+        // Se for erro de tamanho, salva apenas localmente
+        if (error.message.includes('too large') || error.message.includes('exceed')) {
+          throw new Error("IMAGEM_MUITO_GRANDE");
+        }
+        
+        throw error;
+      }
+      
+      if (data?.user) {
+        console.log("Avatar atualizado com sucesso no Supabase:", data.user);
+        
+        // Atualiza o contexto local
+        if (updateUserData) {
+          updateUserData(data.user);
+        }
+        
         alert('✅ Foto de perfil atualizada com sucesso!');
+      } else {
+        throw new Error("Nenhum dado retornado do Supabase");
       }
       
     } catch (err) {
-      console.error('Erro ao atualizar avatar:', err);
-      alert('⚠️ Foto salva apenas localmente. Erro ao sincronizar com a nuvem.');
+      console.error('Erro detalhado ao atualizar avatar:', err);
+      
+      // Tratamento específico para erro de tamanho
+      if (err.message === 'IMAGEM_MUITO_GRANDE' || err.message.includes('too large')) {
+        alert('⚠️ A imagem é muito grande para o Supabase.\n✅ Foto salva apenas localmente.\n\nSolução: Use uma imagem menor ou entre em contato com o suporte.');
+      } else if (err.message.includes('Session expired')) {
+        alert('⚠️ Sua sessão expirou. Faça login novamente.');
+        localStorage.removeItem('user_avatar');
+        navigate('/login');
+      } else {
+        alert(`⚠️ Foto salva apenas localmente. Erro ao sincronizar:\n\n${err.message || 'Erro desconhecido'}\n\nTente novamente mais tarde.`);
+      }
     } finally {
       setUploadingAvatar(false);
     }
   }
 
-  // Função para selecionar imagem da galeria
+  // Função para selecionar imagem da galeria - CORRIGIDA
   const handleImageSelect = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -99,15 +192,21 @@ export default function Home() {
       return;
     }
     
-    if (file.size > 5 * 1024 * 1024) { // 5MB limite
-      alert('A imagem é muito grande. Por favor, selecione uma imagem menor que 5MB.');
+    // Limite mais conservador para o Supabase
+    if (file.size > 2 * 1024 * 1024) { // 2MB limite
+      alert('A imagem é muito grande. Por favor, selecione uma imagem menor que 2MB.');
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result;
-      updateAvatar(base64);
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result;
+        await updateAvatar(base64);
+      } catch (err) {
+        console.error('Erro no processamento da imagem:', err);
+        alert('Erro ao processar a imagem. Tente novamente.');
+      }
     };
     
     reader.onerror = (err) => {
@@ -161,9 +260,9 @@ export default function Home() {
       
       const constraints = {
         video: {
-          facingMode: 'user', // Câmera frontal para selfie
-          width: { ideal: 640 },
-          height: { ideal: 480 }
+          facingMode: 'user',
+          width: { ideal: 400 }, // Reduzido para gerar imagem menor
+          height: { ideal: 400 }
         },
         audio: false
       };
@@ -230,7 +329,7 @@ export default function Home() {
     }
   };
 
-  const takePhoto = () => {
+  const takePhoto = async () => {
     if (!videoRef.current || !canvasRef.current || !cameraStream) return;
     
     const video = videoRef.current;
@@ -247,10 +346,11 @@ export default function Home() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    const photoData = canvas.toDataURL('image/jpeg', 0.8);
+    // Qualidade mais baixa para caber no Supabase
+    const photoData = canvas.toDataURL('image/jpeg', 0.6);
     
     // Atualizar o avatar
-    updateAvatar(photoData);
+    await updateAvatar(photoData);
     
     // Fechar a câmera
     closeCameraModal();
@@ -313,10 +413,15 @@ export default function Home() {
     
     setLoadingName(true);
     try {
+      // Verificar sessão primeiro
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!sessionData.session) throw new Error("Sessão expirada");
+      
       // Atualiza no Supabase
       const { data, error } = await supabase.auth.updateUser({ 
         data: { 
-          ...user?.user_metadata,
+          ...(user?.user_metadata || {}),
           name: name.trim() 
         } 
       });
@@ -331,14 +436,14 @@ export default function Home() {
         updateUserData(data.user);
       }
       
-      // Recarrega após um breve delay para garantir a atualização
+      // Recarrega para garantir a atualização
       setTimeout(() => {
         window.location.reload();
       }, 500);
       
     } catch (err) {
       console.error("Erro ao atualizar nome:", err);
-      alert(`❌ Erro ao atualizar nome: ${err.message || "Erro desconhecido"}\n\nTente novamente ou verifique sua conexão.`);
+      alert(`❌ Erro ao atualizar nome: ${err.message || "Erro desconhecido"}\n\nVerifique sua conexão e tente novamente.`);
     } finally {
       setLoadingName(false);
     }
@@ -438,11 +543,20 @@ export default function Home() {
           <div className="profile-info">
             <div className="avatar">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.style.display = 'none';
-                  e.target.parentElement.textContent = displayName.charAt(0).toUpperCase();
-                }} />
+                <img 
+                  src={avatarUrl} 
+                  alt="Avatar" 
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.style.display = 'none';
+                    // Mostra a inicial se a imagem falhar
+                    const avatarElement = e.target.parentElement;
+                    const initial = displayName.charAt(0).toUpperCase();
+                    if (!avatarElement.textContent) {
+                      avatarElement.textContent = initial;
+                    }
+                  }} 
+                />
               ) : (
                 displayName.charAt(0).toUpperCase()
               )}
@@ -478,7 +592,7 @@ export default function Home() {
                 onClick={openCameraModal}
                 disabled={uploadingAvatar}
               >
-                📷 Tirar Foto
+                {uploadingAvatar ? '🔄 Processando...' : '📷 Tirar Foto'}
               </button>
             </div>
             
@@ -797,9 +911,10 @@ export default function Home() {
                     <button 
                       className="button btn-primary btn-lg"
                       onClick={takePhoto}
-                      disabled={!cameraStream || cameraInitializing}
+                      disabled={!cameraStream || cameraInitializing || uploadingAvatar}
                     >
-                      {cameraInitializing ? '🔄 Inicializando...' : '📸 Tirar Foto'}
+                      {cameraInitializing ? '🔄 Inicializando...' : 
+                       uploadingAvatar ? '🔄 Salvando...' : '📸 Tirar Foto'}
                     </button>
                   </div>
                 </>
