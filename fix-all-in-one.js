@@ -1,3 +1,4 @@
+/* eslint-disable no-undef, no-unused-vars */
 // fix-all-in-one.js - CORREÇÃO COMPLETA AUTOMÁTICA
 const fs = require('fs');
 const path = require('path');

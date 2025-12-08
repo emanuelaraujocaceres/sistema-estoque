@@ -8,7 +8,6 @@ function Sales() {
   const [cart, setCart] = useState([]);
   const [payment, setPayment] = useState("dinheiro");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   
@@ -238,7 +237,7 @@ function Sales() {
       };
 
       // REGISTRAR VENDA
-      const newSale = await makeSale(saleData);
+      await makeSale(saleData);
 
       // Feedback
       alert(`✅ Venda realizada com sucesso!\nCódigo: ${saleData.transactionId}\nTotal: R$ ${total.toFixed(2)}`);
@@ -292,15 +291,6 @@ function Sales() {
 
   return (
     <div className="sales-page-container">
-      {error && (
-        <div className="error-banner">
-          <span>⚠️ {error}</span>
-          <button onClick={() => window.location.reload()} className="button btn-sm btn-secondary">
-            Tentar novamente
-          </button>
-        </div>
-      )}
-
       {/* Cabeçalho com estatísticas */}
       <div className="sales-header-content">
         <h1>💰 Caixa de Vendas</h1>
@@ -373,33 +363,6 @@ function Sales() {
                       ✕
                     </button>
                   )}
-                </div>
-                
-                <div className="filter-buttons">
-                  <button 
-                    className={`filter-btn ${selectedCategory === "all" ? "active" : ""}`}
-                    onClick={() => setSelectedCategory("all")}
-                  >
-                    Todos
-                  </button>
-                  <button 
-                    className={`filter-btn ${selectedCategory === "in_stock" ? "active" : ""}`}
-                    onClick={() => setSelectedCategory("in_stock")}
-                  >
-                    Em Estoque
-                  </button>
-                  <button 
-                    className={`filter-btn ${selectedCategory === "low_stock" ? "active" : ""}`}
-                    onClick={() => setSelectedCategory("low_stock")}
-                  >
-                    Estoque Baixo
-                  </button>
-                  <button 
-                    className={`filter-btn ${selectedCategory === "out_of_stock" ? "active" : ""}`}
-                    onClick={() => setSelectedCategory("out_of_stock")}
-                  >
-                    Sem Estoque
-                  </button>
                 </div>
               </div>
 

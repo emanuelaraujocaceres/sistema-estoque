@@ -460,19 +460,19 @@ export const supabaseStockService = {
   async getStats() {
     try {
       // Contar produtos
-      const { count: productCount, error: productError } = await supabase
+      const { count: productCount } = await supabase
         .from('products')
         .select('*', { count: 'exact', head: true });
       
       // Contar produtos com estoque baixo
-      const { data: lowStockProducts, error: lowStockError } = await supabase
+      const { data: lowStockProducts } = await supabase
         .from('products')
         .select('*')
         .lt('stock', 5);
       
       // Contar vendas do dia
       const today = new Date().toISOString().split('T')[0];
-      const { data: todaySales, error: salesError } = await supabase
+      const { data: todaySales } = await supabase
         .from('sales')
         .select('total')
         .gte('created_at', today);

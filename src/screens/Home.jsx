@@ -20,9 +20,6 @@ export default function Home() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loadingPassword, setLoadingPassword] = useState(false);
   
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [loadingReset, setLoadingReset] = useState(false);
-
   // Funções de logout
   async function handleLogout() {
     if (window.confirm("Tem certeza que deseja sair da sua conta?")) {
@@ -116,11 +113,6 @@ export default function Home() {
     } finally {
       setLoadingPassword(false);
     }
-  }
-
-  // Funções de navegação rápida
-  function navigateTo(path) {
-    navigate(path);
   }
 
   const displayName = user?.user_metadata?.name || user?.email || "Usuário";
@@ -350,52 +342,6 @@ export default function Home() {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Confirmar Reset de Dados */}
-      {showResetConfirm && (
-        <div className="modal-overlay">
-          <div className="modal danger-modal">
-            <div className="modal-header">
-              <h3>⚠️ Resetar Todos os Dados</h3>
-              <button 
-                className="modal-close"
-                onClick={() => setShowResetConfirm(false)}
-                disabled={loadingReset}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="modal-content">
-              <div className="warning-message">
-                <div className="warning-icon">🚨</div>
-                <h4>ATENÇÃO: Esta ação é irreversível!</h4>
-                <p>Todos os produtos e vendas serão permanentemente apagados.</p>
-                <ul className="warning-list">
-                  <li>✅ Produtos padrão serão recriados</li>
-                  <li>❌ Todas as vendas serão perdidas</li>
-                  <li>❌ Todos os produtos serão apagados</li>
-                </ul>
-              </div>
-              <div className="modal-actions">
-                <button 
-                  className="button btn-danger" 
-                  onClick={handleResetData}
-                  disabled={loadingReset}
-                >
-                  {loadingReset ? "Processando..." : "🗑️ SIM, Resetar Dados"}
-                </button>
-                <button 
-                  className="button btn-secondary" 
-                  onClick={() => setShowResetConfirm(false)}
-                  disabled={loadingReset}
-                >
-                  Cancelar
-                </button>
-              </div>
             </div>
           </div>
         </div>

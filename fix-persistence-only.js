@@ -1,3 +1,4 @@
+/* eslint-disable no-undef, no-unused-vars */
 // fix-persistence-only.js - CORREÇÃO DIRETA DA PERSISTÊNCIA
 const fs = require('fs');
 const path = require('path');

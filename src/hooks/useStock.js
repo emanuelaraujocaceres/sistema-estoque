@@ -103,8 +103,7 @@ export const useStock = () => {
       const pending = JSON.parse(localStorage.getItem(backupKey) || '[]');
       const filtered = pending.filter(item => item.productId !== productId);
       localStorage.setItem(backupKey, JSON.stringify(filtered));
-      
-    } catch (error) {
+    } catch {
       // Ignora erros de limpeza
     }
   };
@@ -143,7 +142,7 @@ export const useStock = () => {
             item.attempts = (item.attempts || 0) + 1;
             failed.push(item);
           }
-        } catch (error) {
+        } catch {
           item.attempts = (item.attempts || 0) + 1;
           failed.push(item);
         }

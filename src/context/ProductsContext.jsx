@@ -1,7 +1,9 @@
 ﻿import React, { createContext, useState, useContext, useEffect } from 'react';
+import { DEFAULT_PRODUCTS, STORAGE_KEY } from './productsConstants';
 
 const ProductsContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useProducts = () => {
   return useContext(ProductsContext);
 };
@@ -9,7 +11,7 @@ export const useProducts = () => {
 export const ProductsProvider = ({ children }) => {
   const [products, setProducts] = useState(() => {
     try {
-      const saved = localStorage.getItem('products_app_data'); // Usar mesma key que storage.js
+      const saved = localStorage.getItem(STORAGE_KEY); // Usar mesma key que storage.js
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
@@ -32,41 +34,7 @@ export const ProductsProvider = ({ children }) => {
     }
     
     // Retornar estrutura padrão compatível com storage.js
-    return [
-      { 
-        id: 1, 
-        name: 'Café',
-        sku: 'CAFE001',
-        price: 50.00,
-        cost: 35.00,
-        stock: 4,
-        min_stock: 3,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      { 
-        id: 2, 
-        name: 'Gasolina',
-        sku: 'GAS001',
-        price: 100.00,
-        cost: 80.00,
-        stock: 0,
-        min_stock: 10,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      { 
-        id: 3, 
-        name: 'Cerveja Heineken 269ml',
-        sku: 'CERVEJA001',
-        price: 20.00,
-        cost: 15.00,
-        stock: 10,
-        min_stock: 5,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-    ];
+    return DEFAULT_PRODUCTS;
   });
 
   useEffect(() => {
@@ -84,7 +52,7 @@ export const ProductsProvider = ({ children }) => {
         updated_at: product.updated_at || new Date().toISOString()
       }));
       
-      localStorage.setItem('products_app_data', JSON.stringify(productsToSave));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(productsToSave));
     } catch (e) {
       console.error('Erro ao salvar produtos:', e);
     }
