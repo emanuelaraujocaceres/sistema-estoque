@@ -460,7 +460,7 @@ export default function Products() {
   // Aplica filtro de topo (all | low | out)
   const applyTopFilter = (items) => {
     if (!filter || filter === 'all') return items;
-    if (filter === 'low') return items.filter(p => p.stock > 0 && (p.stock <= (p.min_stock || 0) || p.stock <= 3));
+    if (filter === 'low') return items.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 3));
     if (filter === 'out') return items.filter(p => p.stock <= 0);
     return items;
   };
@@ -477,7 +477,7 @@ export default function Products() {
   // Calcular estatísticas
   const statistics = {
     totalProducts: list.length,
-    lowStock: list.filter(p => p.stock <= (p.min_stock || 0) || p.stock <= 3).length,
+    lowStock: list.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 3)).length,
     outOfStock: list.filter(p => p.stock <= 0).length,
     totalValue: list.reduce((sum, p) => sum + (p.stock * (p.cost || 0)), 0)
   };
