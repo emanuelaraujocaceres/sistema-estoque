@@ -28,6 +28,7 @@ export default function Products() {
   const [stockModalProduct, setStockModalProduct] = useState(null);
   const [bulkStockMode, setBulkStockMode] = useState(false);
   const [bulkStockUpdates, setBulkStockUpdates] = useState({});
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     try {
@@ -456,6 +457,14 @@ export default function Products() {
     return filtered;
   };
 
+  // Aplica filtro de topo (all | low | out)
+  const applyTopFilter = (items) => {
+    if (!filter || filter === 'all') return items;
+    if (filter === 'low') return items.filter(p => p.stock > 0 && (p.stock <= (p.min_stock || 0) || p.stock <= 3));
+    if (filter === 'out') return items.filter(p => p.stock <= 0);
+    return items;
+  };
+
   // Calcular estatísticas
   const statistics = {
     totalProducts: list.length,
@@ -474,29 +483,44 @@ export default function Products() {
         </div>
         
         <div className="header-stats">
-          <div className="stat-card">
+          <button
+            className={`stat-card ${filter === 'all' ? 'active' : ''}`}
+            onClick={() => setFilter('all')}
+            aria-label="Mostrar todos os produtos"
+            type="button"
+          >
             <div className="stat-icon">📊</div>
             <div className="stat-content">
               <div className="stat-value">{statistics.totalProducts}</div>
               <div className="stat-label">Produtos</div>
             </div>
-          </div>
-          
-          <div className="stat-card warning">
+          </button>
+
+          <button
+            className={`stat-card warning ${filter === 'low' ? 'active' : ''}`}
+            onClick={() => setFilter('low')}
+            aria-label="Mostrar produtos com estoque baixo"
+            type="button"
+          >
             <div className="stat-icon">⚠️</div>
             <div className="stat-content">
               <div className="stat-value">{statistics.lowStock}</div>
               <div className="stat-label">Estoque Baixo</div>
             </div>
-          </div>
-          
-          <div className="stat-card danger">
+          </button>
+
+          <button
+            className={`stat-card danger ${filter === 'out' ? 'active' : ''}`}
+            onClick={() => setFilter('out')}
+            aria-label="Mostrar produtos sem estoque"
+            type="button"
+          >
             <div className="stat-icon">❌</div>
             <div className="stat-content">
               <div className="stat-value">{statistics.outOfStock}</div>
               <div className="stat-label">Sem Estoque</div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -510,37 +534,7 @@ export default function Products() {
         </div>
       )}
 
-      {/* Botões de ação de estoque */}
-      {!bulkStockMode && (
-        <div className="card quick-actions-card">
-          <h3 className="form-title">
-            <span className="form-icon">⚡</span> 
-            Ações Rápidas de Estoque
-          </h3>
-          <div className="quick-actions">
-            <button 
-              className="button btn-primary btn-lg" 
-              onClick={() => {
-                // Resetar formulário para adicionar novo produto
-                setForm(emptyForm());
-                setEditing(false);
-                document.querySelector('.form-card')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              ➕ Adicionar Produto (Mesmo com Estoque 0)
-            </button>
-            <button 
-              className="button btn-success btn-lg"
-              onClick={toggleBulkStockMode}
-            >
-              📦 Adicionar Estoque em Vários Produtos
-            </button>
-          </div>
-          <p className="helper-text">
-            ⚡ <strong>Dica rápida:</strong> Você pode adicionar produtos mesmo com estoque zero e incrementar depois!
-          </p>
-        </div>
-      )}
+      {/* Ações rápidas removidas para reduzir poluição visual */}
 
       {/* Modo Bulk Stock */}
       {bulkStockMode && (
@@ -862,7 +856,7 @@ export default function Products() {
 
         <div className="list-stats">
           <span className="stat-item">
-            <strong>{filteredAndSortedProducts().length}</strong> de <strong>{list.length}</strong> produtos
+            <strong>{applyTopFilter(filteredAndSortedProducts()).length}</strong> de <strong>{list.length}</strong> produtos
           </span>
           {searchQuery && (
             <span className="stat-item">
@@ -879,7 +873,7 @@ export default function Products() {
 
       {/* LISTA DE PRODUTOS */}
       <div className="card list-card">
-        {filteredAndSortedProducts().length === 0 ? (
+        {applyTopFilter(filteredAndSortedProducts()).length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">
               {searchQuery ? "🔍" : "📦"}
@@ -917,7 +911,7 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAndSortedProducts().map(p => {
+                {applyTopFilter(filteredAndSortedProducts()).map(p => {
                   const isLowStock = p.stock <= (p.min_stock || 0) || p.stock <= 3;
                   const isOutOfStock = p.stock <= 0;
                   const bulkQuantity = bulkStockUpdates[p.id] || 0;
@@ -1046,33 +1040,7 @@ export default function Products() {
         )}
       </div>
 
-      {/* RESUMO DO VALOR DO ESTOQUE */}
-      <div className="card summary-card">
-        <h3>💰 Resumo do Valor do Estoque</h3>
-        <div className="summary-grid">
-          <div className="summary-item">
-            <div className="summary-label">Valor Total do Estoque</div>
-            <div className="summary-value">R$ {statistics.totalValue.toFixed(2)}</div>
-            <div className="summary-sub">Custo de aquisição</div>
-          </div>
-          
-          <div className="summary-item">
-            <div className="summary-label">Valor de Venda Total</div>
-            <div className="summary-value">
-              R$ {list.reduce((sum, p) => sum + (p.stock * (p.price || 0)), 0).toFixed(2)}
-            </div>
-            <div className="summary-sub">Preço de venda</div>
-          </div>
-          
-          <div className="summary-item">
-            <div className="summary-label">Lucro Potencial</div>
-            <div className="summary-value success">
-              R$ {list.reduce((sum, p) => sum + (p.stock * ((p.price || 0) - (p.cost || 0))), 0).toFixed(2)}
-            </div>
-            <div className="summary-sub">Diferença total</div>
-          </div>
-        </div>
-      </div>
+      {/* Resumo de valor do estoque removido daqui — ficará disponível apenas em Relatórios */}
 
       {/* Modal para adicionar estoque */}
       {showStockModal && stockModalProduct && (

@@ -299,24 +299,41 @@ function Sales() {
           🔄 Última atualização: {new Date(lastUpdate).toLocaleTimeString()}
         </div>
         <div className="header-stats">
-          <div className="stat-item">
+          <button
+            className={`stat-item ${selectedCategory === 'all' ? 'active' : ''}`}
+            onClick={() => setSelectedCategory('all')}
+            type="button"
+            aria-label="Mostrar todos os produtos"
+          >
             <span className="stat-label">Produtos em estoque:</span>
             <span className="stat-value" style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)'}}>
               {productsInStock}
             </span>
-          </div>
-          <div className="stat-item warning">
+          </button>
+
+          <button
+            className={`stat-item warning ${selectedCategory === 'low_stock' ? 'active' : ''}`}
+            onClick={() => setSelectedCategory('low_stock')}
+            type="button"
+            aria-label="Mostrar estoque baixo"
+          >
             <span className="stat-label">Estoque baixo:</span>
             <span className="stat-value" style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)'}}>
               {productsLowStock}
             </span>
-          </div>
-          <div className="stat-item danger">
+          </button>
+
+          <button
+            className={`stat-item danger ${selectedCategory === 'out_of_stock' ? 'active' : ''}`}
+            onClick={() => setSelectedCategory('out_of_stock')}
+            type="button"
+            aria-label="Mostrar sem estoque"
+          >
             <span className="stat-label">Sem estoque:</span>
             <span className="stat-value" style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)'}}>
               {productsOutOfStock}
             </span>
-          </div>
+          </button>
         </div>
       </div>
 
