@@ -286,18 +286,7 @@
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-/* Mostrar inicial apenas se não tiver imagem */
-.avatar:not(:has(img)) {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block !important;
 }
 
 .file-label {
