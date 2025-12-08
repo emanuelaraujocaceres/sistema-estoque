@@ -1,4 +1,4 @@
-/* src/screens/Home.css */
+/* src/screens/Home.css - CORRIGIDO */
 .home-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -262,10 +262,10 @@
   gap: var(--space-lg);
 }
 
+/* 🔥 CORREÇÃO DO AVATAR - IMPORTANTE! */
 .avatar {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -275,14 +275,29 @@
   color: white;
   flex-shrink: 0;
   box-shadow: var(--shadow-md);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  position: relative;
+  overflow: hidden;
 }
 
+/* Garantir que a imagem do avatar fique visível */
 .avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
   display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Mostrar inicial apenas se não tiver imagem */
+.avatar:not(:has(img)) {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .file-label {
@@ -346,6 +361,16 @@
 .btn-action:hover {
   background: var(--gray-200);
   border-color: var(--gray-400);
+}
+
+.btn-logout {
+  background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%);
+  color: white;
+  border: 1px solid var(--danger-dark);
+}
+
+.btn-logout:hover {
+  background: linear-gradient(135deg, var(--danger-dark) 0%, var(--danger) 100%);
 }
 
 /* Cartão de Ações Rápidas */
@@ -659,7 +684,7 @@
 }
 
 .modal-note {
-  background: var(--warning-light);
+  background: rgba(255, 158, 0, 0.1);
   border: 1px solid var(--warning);
   color: var(--warning-dark);
   padding: var(--space-md);
