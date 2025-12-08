@@ -56,9 +56,9 @@
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   display: flex;
@@ -70,41 +70,57 @@
 }
 
 .stat-card:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-3px);
 }
 
 .stat-card.warning {
-  background: rgba(255, 158, 0, 0.3);
-  border-color: rgba(255, 158, 0, 0.4);
+  background: rgba(255, 158, 0, 0.18);
+  border-color: rgba(255, 158, 0, 0.28);
 }
 
 .stat-card.danger {
-  background: rgba(247, 37, 133, 0.3);
-  border-color: rgba(247, 37, 133, 0.4);
+  background: rgba(247, 37, 133, 0.12);
+  border-color: rgba(247, 37, 133, 0.25);
 }
 
 .stat-icon {
   font-size: 2rem;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .stat-content {
   flex: 1;
 }
 
+/* Mais contraste nas letras */
 .stat-value {
   font-size: 2rem;
   font-weight: 800;
   line-height: 1;
   margin-bottom: var(--space-xs);
+  color: var(--gray-900);
 }
 
 .stat-label {
-  font-size: 0.9rem;
-  opacity: 0.9;
+  font-size: 0.95rem;
+  color: var(--gray-800);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  opacity: 1;
+}
+
+/* Estado ativo dos cartões */
+.stat-card.active {
+  background: rgba(255,255,255,0.85);
+  border-color: var(--primary);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(16,24,40,0.08);
+}
+
+/* Indicação de foco por teclado */
+.stat-card:focus {
+  outline: 3px solid rgba(67,97,238,0.12);
 }
 
 /* Error Banner */

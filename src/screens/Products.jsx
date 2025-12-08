@@ -465,6 +465,15 @@ export default function Products() {
     return items;
   };
 
+  // Define filtro e rola até a lista de produtos
+  const setFilterAndScroll = (f) => {
+    setFilter(f);
+    setTimeout(() => {
+      const el = document.querySelector('.list-card');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
+
   // Calcular estatísticas
   const statistics = {
     totalProducts: list.length,
@@ -485,7 +494,7 @@ export default function Products() {
         <div className="header-stats">
           <button
             className={`stat-card ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => setFilter('all')}
+            onClick={() => setFilterAndScroll('all')}
             aria-label="Mostrar todos os produtos"
             type="button"
           >
@@ -498,7 +507,7 @@ export default function Products() {
 
           <button
             className={`stat-card warning ${filter === 'low' ? 'active' : ''}`}
-            onClick={() => setFilter('low')}
+            onClick={() => setFilterAndScroll('low')}
             aria-label="Mostrar produtos com estoque baixo"
             type="button"
           >
@@ -511,7 +520,7 @@ export default function Products() {
 
           <button
             className={`stat-card danger ${filter === 'out' ? 'active' : ''}`}
-            onClick={() => setFilter('out')}
+            onClick={() => setFilterAndScroll('out')}
             aria-label="Mostrar produtos sem estoque"
             type="button"
           >

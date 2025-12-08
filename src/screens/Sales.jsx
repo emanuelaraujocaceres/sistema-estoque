@@ -281,6 +281,15 @@ function Sales() {
   }).length;
   const productsOutOfStock = products.filter(p => (p.stock || p.estoque || 0) <= 0).length;
 
+  // Define categoria e rola até a lista de produtos
+  const setSelectedCategoryAndScroll = (cat) => {
+    setSelectedCategory(cat);
+    setTimeout(() => {
+      const el = document.querySelector('.products-list');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  };
+
   return (
     <div className="sales-page-container">
       {error && (
@@ -301,7 +310,7 @@ function Sales() {
         <div className="header-stats">
           <button
             className={`stat-item ${selectedCategory === 'all' ? 'active' : ''}`}
-            onClick={() => setSelectedCategory('all')}
+            onClick={() => setSelectedCategoryAndScroll('all')}
             type="button"
             aria-label="Mostrar todos os produtos"
           >
@@ -313,7 +322,7 @@ function Sales() {
 
           <button
             className={`stat-item warning ${selectedCategory === 'low_stock' ? 'active' : ''}`}
-            onClick={() => setSelectedCategory('low_stock')}
+            onClick={() => setSelectedCategoryAndScroll('low_stock')}
             type="button"
             aria-label="Mostrar estoque baixo"
           >
@@ -325,7 +334,7 @@ function Sales() {
 
           <button
             className={`stat-item danger ${selectedCategory === 'out_of_stock' ? 'active' : ''}`}
-            onClick={() => setSelectedCategory('out_of_stock')}
+            onClick={() => setSelectedCategoryAndScroll('out_of_stock')}
             type="button"
             aria-label="Mostrar sem estoque"
           >
