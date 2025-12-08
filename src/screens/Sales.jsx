@@ -11,10 +11,8 @@ function Sales() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   
-  // 🔥 USAR O HOOK useStock APENAS PARA LEITURA
   const { products } = useStock();
 
-  // 🔥 SINCRONIZAR ESTOQUE EM TEMPO REAL
   useEffect(() => {
     const loadLatestProducts = () => {
       setLastUpdate(Date.now());
@@ -44,7 +42,6 @@ function Sales() {
     };
   }, []);
 
-  // 🔥 BUSCAR PRODUTOS
   function searchProducts() {
     try {
       if (!query.trim() && selectedCategory === "all") {
@@ -86,7 +83,6 @@ function Sales() {
     }
   }
 
-  // 🔥 ADICIONAR AO CARRINHO (SEM DIMINUIR ESTOQUE)
   function addToCart(product) {
     try {
       if (!product || !product.id) {
@@ -94,7 +90,7 @@ function Sales() {
       }
 
       const stock = product.stock || product.estoque || 0;
-      const name = product.name || product.nome || "Produto";
+      const name = product.name || product.nome || "";
       
       if (stock <= 0) {
         alert(`❌ ${name} está sem estoque!`);
@@ -137,7 +133,6 @@ function Sales() {
     }
   }
 
-  // 🔥 MUDAR QUANTIDADE NO CARRINHO
   function changeQty(productId, newQty) {
     try {
       if (newQty < 1) {
@@ -176,7 +171,6 @@ function Sales() {
     }
   }
 
-  // 🔥 REMOVER ITEM DO CARRINHO
   function removeItem(productId) {
     try {
       const item = cart.find(i => i.productId === productId);
@@ -194,7 +188,6 @@ function Sales() {
     }
   }
 
-  // 🔥 FINALIZAR VENDA (COM ATUALIZAÇÃO DE PÁGINA)
   async function finalize() {
     try {
       if (cart.length === 0) {
@@ -209,7 +202,6 @@ function Sales() {
 
       setLoading(true);
 
-      // VERIFICAR ESTOQUE ANTES DE PROCESSAR
       for (const item of cart) {
         const product = products.find(p => p.id === item.productId);
         if (!product) {
@@ -236,17 +228,13 @@ function Sales() {
         transactionId: `sale_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       };
 
-      // REGISTRAR VENDA
       await makeSale(saleData);
 
-      // Feedback
       alert(`✅ Venda realizada com sucesso!\nCódigo: ${saleData.transactionId}\nTotal: R$ ${total.toFixed(2)}`);
 
-      // Limpar carrinho
       setCart([]);
       localStorage.removeItem('cart');
 
-      // 🔥 ATUALIZAR A PÁGINA PARA MOSTRAR VALORES ATUALIZADOS
       setTimeout(() => {
         window.location.reload();
       }, 500);
@@ -258,7 +246,6 @@ function Sales() {
     }
   }
 
-  // 🔥 LIMPAR CARRINHO
   function clearCart() {
     if (cart.length === 0) return;
     
@@ -268,19 +255,9 @@ function Sales() {
     }
   }
 
-  // 🔥 CALCULAR ESTATÍSTICAS
   const filteredProducts = searchProducts();
   const totalVenda = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
-  
-  const productsInStock = products.filter(p => (p.stock || p.estoque || 0) > 0).length;
-  const productsLowStock = products.filter(p => {
-    const stock = p.stock || p.estoque || 0;
-    const minStock = p.min_stock || p.minEstoque || 3;
-    return stock > 0 && stock <= minStock;
-  }).length;
-  const productsOutOfStock = products.filter(p => (p.stock || p.estoque || 0) <= 0).length;
 
-  // Define categoria e rola até a lista de produtos
   const setSelectedCategoryAndScroll = (cat) => {
     setSelectedCategory(cat);
     setTimeout(() => {
@@ -291,48 +268,11 @@ function Sales() {
 
   return (
     <div className="sales-page-container">
-      {/* Cabeçalho com estatísticas */}
+      {/* 🔥 CABEÇALHO SIMPLIFICADO - REMOVIDA A SEÇÃO DE ESTOQUE */}
       <div className="sales-header-content">
         <h1>💰 Caixa de Vendas</h1>
-        <div className="sync-info" style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', marginBottom: '10px' }}>
-          🔄 Última atualização: {new Date(lastUpdate).toLocaleTimeString()}
-        </div>
-        <div className="header-stats">
-          <button
-            className={`stat-item ${selectedCategory === 'all' ? 'active' : ''}`}
-            onClick={() => setSelectedCategoryAndScroll('all')}
-            type="button"
-            aria-label="Mostrar todos os produtos"
-          >
-            <span className="stat-label">Produtos em estoque:</span>
-            <span className="stat-value" style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)'}}>
-              {productsInStock}
-            </span>
-          </button>
-
-          <button
-            className={`stat-item warning ${selectedCategory === 'low_stock' ? 'active' : ''}`}
-            onClick={() => setSelectedCategoryAndScroll('low_stock')}
-            type="button"
-            aria-label="Mostrar estoque baixo"
-          >
-            <span className="stat-label">Estoque baixo:</span>
-            <span className="stat-value" style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)'}}>
-              {productsLowStock}
-            </span>
-          </button>
-
-          <button
-            className={`stat-item danger ${selectedCategory === 'out_of_stock' ? 'active' : ''}`}
-            onClick={() => setSelectedCategoryAndScroll('out_of_stock')}
-            type="button"
-            aria-label="Mostrar sem estoque"
-          >
-            <span className="stat-label">Sem estoque:</span>
-            <span className="stat-value" style={{color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)'}}>
-              {productsOutOfStock}
-            </span>
-          </button>
+        <div className="sync-info">
+          🔄 Última sincronização: {new Date(lastUpdate).toLocaleTimeString()}
         </div>
       </div>
 
@@ -342,9 +282,10 @@ function Sales() {
           {/* COLUNA ESQUERDA: PRODUTOS */}
           <div className="products-column">
             <div className="card search-section">
-              <h2 style={{color: '#1f2937'}}>🛒 Selecionar Produtos</h2>
+              <h2>🛒 Selecionar Produtos</h2>
               
               <div className="search-controls">
+                {/* 🔥 REMOVIDOS OS BOTÕES DE FILTRO DE ESTOQUE DO CABEÇALHO */}
                 <div className="search-box">
                   <input
                     className="input search-input"
@@ -352,7 +293,6 @@ function Sales() {
                     value={query}
                     onChange={e => setQuery(e.target.value)}
                     disabled={loading}
-                    style={{color: '#1f2937'}}
                   />
                   {query && (
                     <button 
@@ -363,6 +303,38 @@ function Sales() {
                       ✕
                     </button>
                   )}
+                </div>
+                
+                {/* 🔥 FILTROS AGORA FICAM AQUI (OPCIONAL) */}
+                <div className="filter-buttons">
+                  <button
+                    className={`filter-btn ${selectedCategory === 'all' ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory('all')}
+                    type="button"
+                  >
+                    Todos
+                  </button>
+                  <button
+                    className={`filter-btn ${selectedCategory === 'in_stock' ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory('in_stock')}
+                    type="button"
+                  >
+                    Em Estoque
+                  </button>
+                  <button
+                    className={`filter-btn ${selectedCategory === 'low_stock' ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory('low_stock')}
+                    type="button"
+                  >
+                    Estoque Baixo
+                  </button>
+                  <button
+                    className={`filter-btn ${selectedCategory === 'out_of_stock' ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory('out_of_stock')}
+                    type="button"
+                  >
+                    Sem Estoque
+                  </button>
                 </div>
               </div>
 
@@ -376,8 +348,8 @@ function Sales() {
                 ) : filteredProducts.length === 0 ? (
                   <div className="no-products">
                     <div className="no-products-icon">📦</div>
-                    <h3 style={{color: '#374151'}}>Nenhum produto encontrado</h3>
-                    <p style={{color: '#6b7280'}}>
+                    <h3>Nenhum produto encontrado</h3>
+                    <p>
                       {query 
                         ? `Nenhum produto corresponde a "${query}"`
                         : selectedCategory !== "all"
@@ -411,16 +383,9 @@ function Sales() {
                         <div 
                           key={product.id} 
                           className={`product-card ${isOutOfStock ? "out-of-stock" : isLowStock ? "low-stock" : ""}`}
-                          style={{
-                            background: 'rgba(255, 255, 255, 0.98)',
-                            border: '2px solid var(--gray-200)'
-                          }}
                         >
                           <div className="product-header">
-                            <h4 
-                              className="product-name"
-                              style={{color: '#111827', textShadow: '0 1px 2px rgba(255, 255, 255, 0.9)'}}
-                            >
+                            <h4 className="product-name">
                               {product.name || product.nome || "Sem nome"}
                             </h4>
                             {(product.sku || product.codigo) && (
@@ -428,10 +393,7 @@ function Sales() {
                             )}
                           </div>
                           
-                          <div 
-                            className="product-price"
-                            style={{color: '#1f2937', fontWeight: '900', textShadow: '0 2px 4px rgba(255, 255, 255, 0.8)'}}
-                          >
+                          <div className="product-price">
                             R$ {Number(product.price || product.preco || 0).toFixed(2)}
                           </div>
                           
@@ -439,10 +401,7 @@ function Sales() {
                             <span className="stock-icon">
                               {isOutOfStock ? '❌' : isLowStock ? '⚠️' : '✅'}
                             </span>
-                            <span 
-                              className="stock-qty"
-                              style={{fontWeight: '700', color: statusColor}}
-                            >
+                            <span className="stock-qty">
                               {stock}
                             </span>
                             <span className="stock-label">unidades</span>
@@ -451,10 +410,10 @@ function Sales() {
                             )}
                           </div>
                           
-                          <div style={{marginTop: 'var(--space-sm)', fontSize: '0.9rem', color: statusColor, fontWeight: '600'}}>
+                          <div className="product-status">
                             {statusText}
                             {cartQuantity > 0 && (
-                              <span style={{marginLeft: '8px', color: '#4361ee'}}>
+                              <span className="cart-quantity">
                                 ({cartQuantity} no carrinho)
                               </span>
                             )}
@@ -465,7 +424,6 @@ function Sales() {
                             onClick={() => addToCart(product)}
                             disabled={isOutOfStock || loading}
                             title={isOutOfStock ? "Produto sem estoque" : "Adicionar ao carrinho"}
-                            style={{marginTop: 'var(--space-md)'}}
                           >
                             {isOutOfStock ? "Sem Estoque" : "➕ Adicionar"}
                           </button>
@@ -477,10 +435,10 @@ function Sales() {
               </div>
               
               <div className="products-footer">
-                <span className="products-count" style={{color: '#4b5563'}}>
+                <span className="products-count">
                   Mostrando {filteredProducts.length} de {products.length} produtos
                 </span>
-                <div style={{display: 'flex', gap: '8px'}}>
+                <div className="products-actions">
                   <button 
                     className="button btn-secondary btn-sm"
                     onClick={() => setLastUpdate(Date.now())}
@@ -504,14 +462,14 @@ function Sales() {
           <div className="cart-column">
             <div className="card cart-section">
               <div className="cart-header">
-                <h2 style={{color: '#1f2937'}}>🛍️ Carrinho de Compras</h2>
+                <h2>🛍️ Carrinho de Compras</h2>
                 {cart.length > 0 && (
                   <button 
                     className="button btn-danger btn-sm" 
                     onClick={clearCart}
                     disabled={loading}
                   >
-                    🗑️ Limpar Carrinho
+                    🗑️ Limpar
                   </button>
                 )}
               </div>
@@ -519,8 +477,8 @@ function Sales() {
               {cart.length === 0 ? (
                 <div className="empty-cart">
                   <div className="cart-icon">🛒</div>
-                  <h3 style={{color: '#374151'}}>Carrinho vazio</h3>
-                  <p style={{color: '#6b7280'}}>Adicione produtos para começar uma venda</p>
+                  <h3>Carrinho vazio</h3>
+                  <p>Adicione produtos para começar uma venda</p>
                   <p className="cart-hint">
                     Procure produtos à esquerda e clique em "Adicionar"
                   </p>
@@ -539,17 +497,11 @@ function Sales() {
                         <div key={item.productId} className="cart-item">
                           <div className="cart-item-main">
                             <div className="cart-item-info">
-                              <h4 
-                                className="item-name"
-                                style={{color: '#111827', fontWeight: '600'}}
-                              >
+                              <h4 className="item-name">
                                 {item.name}
                               </h4>
                               <div className="item-details">
-                                <span 
-                                  className="item-price"
-                                  style={{color: '#4361ee', fontWeight: '500'}}
-                                >
+                                <span className="item-price">
                                   R$ {item.unitPrice.toFixed(2)}/un
                                 </span>
                                 <span className="item-stock">
@@ -568,10 +520,7 @@ function Sales() {
                                 −
                               </button>
                               
-                              <span 
-                                className="quantity-display"
-                                style={{color: '#1f2937', fontWeight: '700'}}
-                              >
+                              <span className="quantity-display">
                                 {item.qty}
                               </span>
                               
@@ -587,13 +536,8 @@ function Sales() {
                           </div>
                           
                           <div className="cart-item-footer">
-                            <div 
-                              className="item-subtotal"
-                              style={{color: '#374151'}}
-                            >
-                              Subtotal: <strong style={{color: '#4361ee', fontSize: '1.1rem'}}>
-                                R$ {item.subtotal.toFixed(2)}
-                              </strong>
+                            <div className="item-subtotal">
+                              Subtotal: <strong>R$ {item.subtotal.toFixed(2)}</strong>
                             </div>
                             
                             <button
@@ -616,23 +560,22 @@ function Sales() {
                       <h3>Resumo da Venda</h3>
                       
                       <div className="summary-row">
-                        <span style={{color: '#4b5563'}}>Itens no carrinho:</span>
-                        <span style={{color: '#1f2937', fontWeight: '600'}}>{cart.length}</span>
+                        <span>Itens no carrinho:</span>
+                        <span>{cart.length}</span>
                       </div>
                       
                       <div className="summary-row">
-                        <span style={{color: '#4b5563'}}>Total parcial:</span>
-                        <span style={{color: '#1f2937', fontWeight: '600'}}>R$ {totalVenda.toFixed(2)}</span>
+                        <span>Total parcial:</span>
+                        <span>R$ {totalVenda.toFixed(2)}</span>
                       </div>
                       
                       <div className="payment-method">
-                        <label style={{color: '#374151', fontWeight: '600'}}>💳 Forma de Pagamento:</label>
+                        <label>💳 Forma de Pagamento:</label>
                         <select
                           className="payment-select"
                           value={payment}
                           onChange={e => setPayment(e.target.value)}
                           disabled={loading}
-                          style={{color: '#1f2937'}}
                         >
                           <option value="dinheiro">💵 Dinheiro</option>
                           <option value="pix">🏦 PIX</option>
@@ -643,11 +586,8 @@ function Sales() {
                     </div>
                     
                     <div className="total-section">
-                      <div className="total-label" style={{color: '#374151'}}>💰 Total da Venda:</div>
-                      <div 
-                        className="total-amount"
-                        style={{color: '#1f2937', textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'}}
-                      >
+                      <div className="total-label">💰 Total da Venda:</div>
+                      <div className="total-amount">
                         R$ {totalVenda.toFixed(2)}
                       </div>
                     </div>
@@ -663,9 +603,9 @@ function Sales() {
                     </div>
                     
                     <div className="checkout-note">
-                      <p style={{color: '#6b7280', fontSize: '0.85rem'}}>
+                      <p>
                         ⚠️ O estoque será atualizado apenas após a finalização da venda.<br/>
-                        ✅ Sistema anti-duplicação ativo - sem descontos em dobro.
+                        ✅ Sistema anti-duplicação ativo.
                       </p>
                     </div>
                   </div>
@@ -682,10 +622,6 @@ function Sales() {
           className="button btn-success checkout-btn fixed-checkout-btn"
           onClick={finalize}
           disabled={loading || cart.length === 0}
-          style={{
-            background: cart.length === 0 ? '#6b7280' : '#10b981',
-            cursor: cart.length === 0 ? 'not-allowed' : 'pointer'
-          }}
         >
           {loading ? (
             <>
@@ -712,6 +648,23 @@ function Sales() {
         
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+        
+        .product-status {
+          margin-top: var(--space-sm);
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: inherit;
+        }
+        
+        .cart-quantity {
+          margin-left: 8px;
+          color: var(--primary);
+        }
+        
+        .products-actions {
+          display: flex;
+          gap: 8px;
         }
       `}</style>
     </div>
