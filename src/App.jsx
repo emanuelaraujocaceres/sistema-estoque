@@ -8,12 +8,11 @@ import Login from "./screens/Login";
 import { AuthProvider } from "./auth/AuthContext";
 import { ProductsProvider } from "./context/ProductsContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { initDefaultProducts, clearAllData, exportData } from "./services/storage";
+import { initDefaultProducts } from "./services/storage";
 import "./App.css";
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showDevTools, setShowDevTools] = useState(false);
 
   // Inicializar produtos padrão
   useEffect(() => {
@@ -24,19 +23,7 @@ export default function App() {
     }
   }, []);
 
-  const handleExport = () => {
-    try {
-      exportData();
-    } catch (error) {
-      alert("Erro ao exportar dados: " + error.message);
-    }
-  };
-
-  const handleClearData = () => {
-    if (window.confirm("⚠️ PERIGO: Isso apagará TODOS os dados do sistema. Tem certeza ABSOLUTA?")) {
-      clearAllData();
-    }
-  };
+  
 
   return (
     <ProductsProvider>
@@ -73,45 +60,13 @@ export default function App() {
                   
                   <div className="nav-divider"></div>
                   
-                  <button 
-                    className="nav-link dev-tools-btn"
-                    onClick={() => setShowDevTools(!showDevTools)}
-                  >
-                    <span className="nav-icon">🛠️</span> Ferramentas
-                  </button>
+                  
                 </nav>
               </div>
             </header>
 
             {/* Ferramentas de Desenvolvimento */}
-            {showDevTools && (
-              <div className="dev-tools-panel">
-                <div className="dev-tools-content">
-                  <h3>🛠️ Ferramentas de Desenvolvimento</h3>
-                  <div className="dev-tools-buttons">
-                    <button className="button btn-secondary" onClick={handleExport}>
-                      📤 Exportar Dados
-                    </button>
-                    <button 
-                      className="button btn-danger" 
-                      onClick={handleClearData}
-                      title="Limpa TODOS os dados do sistema"
-                    >
-                      🗑️ Limpar Todos os Dados
-                    </button>
-                    <button 
-                      className="button btn-secondary"
-                      onClick={() => window.location.reload()}
-                    >
-                      🔄 Recarregar Página
-                    </button>
-                  </div>
-                  <p className="dev-tools-warning">
-                    ⚠️ Use com cuidado! Algumas ações são irreversíveis.
-                  </p>
-                </div>
-              </div>
-            )}
+            
 
             {/* Main Content */}
             <main className="main">
@@ -174,13 +129,6 @@ export default function App() {
                 <p>Sistema Estoque & Caixa © {new Date().getFullYear()} - Todos os direitos reservados</p>
                 <p className="footer-version">Versão 2.0.0 | Desenvolvido com React + Vite</p>
                 <div className="footer-links">
-                  <button 
-                    className="footer-link" 
-                    onClick={() => setShowDevTools(!showDevTools)}
-                  >
-                    🛠️ Ferramentas
-                  </button>
-                  <span className="footer-separator">•</span>
                   <a href="#" className="footer-link" onClick={(e) => { e.preventDefault(); alert('Em breve!'); }}>
                     📖 Documentação
                   </a>
