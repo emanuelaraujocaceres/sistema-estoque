@@ -74,6 +74,8 @@ export function addProduct(product) {
       cost: Number(product.cost) || 0,
       stock: Math.max(0, Number(product.stock) || 0),
       min_stock: Math.max(0, Number(product.min_stock) || 0),
+      // opcional: campo de imagem (base64 ou URL)
+      image: product.image || undefined,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };

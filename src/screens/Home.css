@@ -277,6 +277,26 @@
   box-shadow: var(--shadow-md);
 }
 
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.file-label {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
 .profile-details h3 {
   font-size: 1.5rem;
   color: var(--gray-800);

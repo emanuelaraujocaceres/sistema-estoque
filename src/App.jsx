@@ -1,5 +1,5 @@
 ﻿import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import Home from "./screens/Home";
 import Products from "./screens/Products";
 import Sales from "./screens/Sales";
@@ -12,8 +12,6 @@ import { initDefaultProducts } from "./services/storage";
 import "./App.css";
 
 export default function App() {
-  const [menuOpen, setMenuOpen] = useState(false);
-
   // Inicializar produtos padrão
   useEffect(() => {
     try {
@@ -34,27 +32,20 @@ export default function App() {
             <header className="header">
               <div className="header-container">
                 <div className="header-left">
-                  <button 
-                    className="menu-toggle" 
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    aria-label="Toggle menu"
-                  >
-                    {menuOpen ? '✕' : '☰'}
-                  </button>
                   <h1>Sistema Estoque & Caixa</h1>
                 </div>
                 
-                <nav className={`header-nav ${menuOpen ? 'open' : ''}`}>
-                  <Link to="/" className="nav-link" onClick={() => setMenuOpen(false)}>
+                <nav className="header-nav">
+                  <Link to="/" className="nav-link">
                     <span className="nav-icon">🏠</span> Home
                   </Link>
-                  <Link to="/products" className="nav-link" onClick={() => setMenuOpen(false)}>
+                  <Link to="/products" className="nav-link">
                     <span className="nav-icon">📦</span> Estoque
                   </Link>
-                  <Link to="/sales" className="nav-link" onClick={() => setMenuOpen(false)}>
+                  <Link to="/sales" className="nav-link">
                     <span className="nav-icon">💰</span> Caixa
                   </Link>
-                  <Link to="/reports" className="nav-link" onClick={() => setMenuOpen(false)}>
+                  <Link to="/reports" className="nav-link">
                     <span className="nav-icon">📊</span> Relatórios
                   </Link>
                   
@@ -106,7 +97,7 @@ export default function App() {
                         <h2>404 - Página não encontrada</h2>
                         <p>A página que você está procurando não existe ou foi movida.</p>
                         <div className="not-found-actions">
-                          <Link to="/" className="button btn-primary" onClick={() => setMenuOpen(false)}>
+                          <Link to="/" className="button btn-primary">
                             🏠 Voltar para Home
                           </Link>
                           <button 

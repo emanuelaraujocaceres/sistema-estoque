@@ -11,7 +11,8 @@ function emptyForm() {
     stock: "", 
     min_stock: "",
     sku: "",
-    category: ""
+    category: "",
+    image: ""
   }; 
 }
 
@@ -238,6 +239,27 @@ export default function Products() {
     }, 3000);
   };
 
+    // Converter arquivo de imagem para base64 e salvar no formulário
+    function handleImageChange(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        setError('Por favor, selecione um arquivo de imagem válido');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setForm(f => ({ ...f, image: reader.result }));
+      };
+      reader.onerror = (err) => {
+        console.error('Erro ao ler arquivo de imagem:', err);
+        setError('Erro ao processar a imagem');
+      };
+      reader.readAsDataURL(file);
+    }
+
   // ====== FUNÇÕES EXISTENTES ======
 
   function handleChange(e) {
@@ -292,6 +314,7 @@ export default function Products() {
         cost: Number(form.cost) || 0,
         stock: Math.max(0, Number(form.stock) || 0),
         min_stock: Math.max(0, Number(form.min_stock) || 0),
+        image: form.image || undefined,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -324,7 +347,8 @@ export default function Products() {
         price: p.price?.toString() || "",
         cost: p.cost?.toString() || "",
         stock: p.stock?.toString() || "",
-        min_stock: p.min_stock?.toString() || ""
+        min_stock: p.min_stock?.toString() || "",
+        image: p.image || ""
       });
       setEditing(true);
       setError(null);
@@ -348,6 +372,7 @@ export default function Products() {
         ...form,
         name: form.name.trim(),
         sku: form.sku?.trim() || "",
+        image: form.image || undefined,
         price: Number(form.price) || 0,
         cost: Number(form.cost) || 0,
         stock: Math.max(0, Number(form.stock) || 0),
@@ -643,6 +668,23 @@ export default function Products() {
           </div>
 
           <div className="form-group">
+            <label>Imagem do Produto</label>
+            <input
+              className="input"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              disabled={loading}
+            />
+            {form.image && (
+              <div className="image-preview">
+                <img src={form.image} alt="Pré-visualização" />
+              </div>
+            )}
+            <small className="helper-text">Opcional — será exibida como miniatura na lista</small>
+          </div>
+
+          <div className="form-group">
             <label>
               Custo (R$)
               <span className="helper">Custo de aquisição</span>
@@ -929,8 +971,15 @@ export default function Products() {
                     <tr key={p.id} className={isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : ''}>
                       <td className="product-cell">
                         <div className="product-main">
-                          <strong>{p.name}</strong>
-                          {p.sku && <div className="sku-text">SKU: {p.sku}</div>}
+                          {p.image ? (
+                            <div className="product-thumb">
+                              <img src={p.image} alt={p.name} />
+                            </div>
+                          ) : null}
+                          <div>
+                            <strong>{p.name}</strong>
+                            {p.sku && <div className="sku-text">SKU: {p.sku}</div>}
+                          </div>
                         </div>
                         {p.updated_at && (
                           <div className="update-time">

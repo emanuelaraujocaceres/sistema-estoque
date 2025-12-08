@@ -19,6 +19,7 @@ export default function Home() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loadingPassword, setLoadingPassword] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   
   // Funções de logout
   async function handleLogout() {
@@ -140,7 +141,11 @@ export default function Home() {
           
           <div className="profile-info">
             <div className="avatar">
-              {displayName.charAt(0).toUpperCase()}
+              {user?.user_metadata?.avatar ? (
+                <img src={user.user_metadata.avatar} alt="Avatar" />
+              ) : (
+                displayName.charAt(0).toUpperCase()
+              )}
             </div>
             <div className="profile-details">
               <h3>{displayName}</h3>
@@ -157,6 +162,40 @@ export default function Home() {
           </div>
 
           <div className="profile-actions">
+            <label className="button file-label">
+              📷 Alterar Foto
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files && e.target.files[0];
+                  if (!file) return;
+                  if (!file.type.startsWith('image/')) {
+                    alert('Selecione uma imagem válida');
+                    return;
+                  }
+
+                  const reader = new FileReader();
+                  reader.onload = async () => {
+                    const base64 = reader.result;
+                    try {
+                      setUploadingAvatar(true);
+                      const { error } = await supabase.auth.updateUser({ data: { avatar: base64 } });
+                      if (error) throw error;
+                      alert('✅ Foto de perfil atualizada. O app será recarregado.');
+                      window.location.reload();
+                    } catch (err) {
+                      console.error('Erro ao atualizar avatar:', err);
+                      alert('Erro ao atualizar foto de perfil');
+                    } finally {
+                      setUploadingAvatar(false);
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                }}
+              />
+            </label>
             <button 
               className="button btn-action"
               onClick={() => setEditingName(true)}
