@@ -9,6 +9,8 @@ function Reports() {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all");
   const [dateRange, setDateRange] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     loadData();
@@ -93,6 +95,13 @@ function Reports() {
   const totalSold = filteredSales.reduce((sum, sale) => sum + (Number(sale.total) || 0), 0);
   const totalSalesCount = filteredSales.length;
   
+  // Paginação
+  const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
+  const paginatedSales = filteredSales.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   // Produtos mais vendidos
   const topProducts = () => {
     const productSales = {};
@@ -304,28 +313,32 @@ function Reports() {
           </div>
           
           {paymentMethods().length > 0 ? (
-            <div className="payment-methods">
-              {paymentMethods().map(method => (
-                <div key={method.method} className="payment-method-item">
-                  <div className="method-name">
-                    {method.method === 'dinheiro' && '💵 Dinheiro'}
-                    {method.method === 'pix' && '🏦 PIX'}
-                    {method.method === 'cartao_credito' && '💳 Cartão de Crédito'}
-                    {method.method === 'cartao_debito' && '💳 Cartão de Débito'}
-                    {method.method === 'desconhecido' && '❓ Desconhecido'}
+            <div className="payment-methods-container">
+              <div className="payment-methods">
+                {paymentMethods().map(method => (
+                  <div key={method.method} className="payment-method-item">
+                    <div className="method-header">
+                      <div className="method-name">
+                        {method.method === 'dinheiro' && '💵 Dinheiro'}
+                        {method.method === 'pix' && '🏦 PIX'}
+                        {method.method === 'cartao_credito' && '💳 Cartão de Crédito'}
+                        {method.method === 'cartao_debito' && '💳 Cartão de Débito'}
+                        {method.method === 'desconhecido' && '❓ Desconhecido'}
+                      </div>
+                      <div className="method-percentage">{method.percentage}%</div>
+                    </div>
+                    <div className="method-stats">
+                      <div className="method-count">{method.count} vendas</div>
+                    </div>
+                    <div className="method-bar">
+                      <div 
+                        className="bar-fill" 
+                        style={{ width: `${method.percentage}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="method-stats">
-                    <div className="method-count">{method.count} vendas</div>
-                    <div className="method-percentage">{method.percentage}%</div>
-                  </div>
-                  <div className="method-bar">
-                    <div 
-                      className="bar-fill" 
-                      style={{ width: `${method.percentage}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <div className="empty-state">
@@ -354,7 +367,6 @@ function Reports() {
                 <table className="table sales-table">
                   <thead>
                     <tr>
-                      <th>ID</th>
                       <th>Data/Hora</th>
                       <th>Itens</th>
                       <th>Total</th>
@@ -362,27 +374,29 @@ function Reports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSales.map(sale => {
+                    {paginatedSales.map(sale => {
                       const saleDate = new Date(sale.created_at || sale.timestamp || Date.now());
                       const itemsCount = sale.items?.length || 0;
                       
                       return (
                         <tr key={sale.id}>
-                          <td className="sale-id">
-                            <span className="id-text">{sale.id.substring(0, 8)}...</span>
-                          </td>
                           <td className="sale-date">
-                            {saleDate.toLocaleDateString('pt-BR')}
+                            <div className="sale-date-main">
+                              {saleDate.toLocaleDateString('pt-BR')}
+                            </div>
                             <div className="sale-time">
                               {saleDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </td>
                           <td className="sale-items">
-                            {itemsCount} {itemsCount === 1 ? 'item' : 'itens'}
+                            <div className="items-count">
+                              {itemsCount} {itemsCount === 1 ? 'item' : 'itens'}
+                            </div>
                             <div className="items-preview">
                               {sale.items?.slice(0, 2).map(item => (
                                 <span key={item.productId} className="item-tag">
-                                  {item.name || 'Produto'}
+                                  {item.name?.substring(0, 15) || 'Produto'}
+                                  {item.name && item.name.length > 15 ? '...' : ''}
                                 </span>
                               ))}
                               {itemsCount > 2 && (
@@ -411,8 +425,29 @@ function Reports() {
               
               <div className="sales-footer">
                 <div className="pagination-info">
-                  Mostrando {Math.min(filteredSales.length, 10)} de {filteredSales.length} vendas
+                  Mostrando {Math.min(paginatedSales.length, itemsPerPage)} de {filteredSales.length} vendas
                 </div>
+                {totalPages > 1 && (
+                  <div className="pagination-controls">
+                    <button 
+                      className="button btn-sm btn-secondary" 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      ◀ Anterior
+                    </button>
+                    <span className="pagination-page">
+                      Página {currentPage} de {totalPages}
+                    </span>
+                    <button 
+                      className="button btn-sm btn-secondary" 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próxima ▶
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
