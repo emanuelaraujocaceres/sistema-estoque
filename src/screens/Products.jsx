@@ -12,7 +12,9 @@ function emptyForm() {
     min_stock: "",
     sku: "",
     category: "",
-    image: ""
+    image: "",
+    saleType: "unit",
+    pricePerKilo: ""
   }; 
 }
 
@@ -31,10 +33,10 @@ export default function Products() {
   const [bulkStockUpdates, setBulkStockUpdates] = useState({});
   const [filter, setFilter] = useState("all");
   
-  // Estados para a câmera
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
   const [cameraError, setCameraError] = useState(null);
+  const [cameraInitializing, setCameraInitializing] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -47,7 +49,6 @@ export default function Products() {
       }
       setList(products);
       
-      // Inicializar updates para modo bulk
       const initialUpdates = {};
       products.forEach(p => {
         initialUpdates[p.id] = 0;
@@ -60,84 +61,120 @@ export default function Products() {
     }
   }, []);
 
-  // ====== FUNÇÕES DA CÂMERA ======
+  const checkCameraSupport = () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return {
+        supported: false,
+        message: '🚫 Seu navegador não suporta acesso à câmera. Use Chrome, Firefox ou Safari.'
+      };
+    }
+    
+    const isSecureContext = window.isSecureContext || 
+                            window.location.protocol === 'https:' || 
+                            window.location.hostname === 'localhost' || 
+                            window.location.hostname === '127.0.0.1';
+    
+    if (!isSecureContext) {
+      return {
+        supported: false,
+        message: '🔒 Acesso à câmera requer HTTPS ou localhost. Seu acesso atual não é seguro.'
+      };
+    }
+    
+    return { supported: true, message: '' };
+  };
 
-  // Iniciar câmera
   const startCamera = async () => {
     try {
       setCameraError(null);
+      setCameraInitializing(true);
       
-      // Pedir permissão de câmera de forma explícita
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCameraError('Seu navegador não suporta acesso à câmera.');
-        showNotification('❌ Seu navegador não suporta acesso à câmera.', 'error');
+      const cameraCheck = checkCameraSupport();
+      if (!cameraCheck.supported) {
+        setCameraError(cameraCheck.message);
+        showNotification(cameraCheck.message, 'error');
+        setCameraInitializing(false);
         return;
       }
       
-      // Mostrar aviso ao usuário
-      const permissionConfirmed = window.confirm(
-        '🎥 O aplicativo pedirá acesso à sua câmera.\n\nClique em "Permitir" quando solicitado para usar a câmera do seu dispositivo.'
-      );
+      stopCamera();
       
-      if (!permissionConfirmed) {
-        return;
-      }
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Preferir câmera traseira
+      const constraints = {
+        video: {
+          facingMode: 'environment',
           width: { ideal: 1280 },
           height: { ideal: 720 }
         },
-        audio: false 
-      });
+        audio: false
+      };
+      
+      console.log('📸 Tentando acessar câmera com constraints:', constraints);
+      
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('✅ Câmera traseira acessada com sucesso');
+      } catch (rearError) {
+        console.log('⚠️ Câmera traseira falhou, tentando frontal:', rearError);
+        
+        constraints.video.facingMode = 'user';
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          console.log('✅ Câmera frontal acessada com sucesso');
+        } catch (frontError) {
+          console.error('❌ Ambas as câmeras falharam:', frontError);
+          throw frontError;
+        }
+      }
       
       setCameraStream(stream);
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-      }
-      
-      showNotification('✅ Câmera ativada com sucesso!', 'success');
-    } catch (err) {
-      console.error('Erro ao acessar câmera:', err);
-      
-      // Fallback para câmera frontal se a traseira falhar
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true,
-          audio: false 
+        
+        await new Promise((resolve) => {
+          if (videoRef.current.readyState >= 1) {
+            resolve();
+          } else {
+            videoRef.current.onloadedmetadata = () => resolve();
+          }
         });
-        
-        setCameraStream(stream);
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        
-        showNotification('✅ Câmera ativada com sucesso!', 'success');
-      } catch (fallbackErr) {
-        console.error('Erro no fallback da câmera:', fallbackErr);
-        
-        // Mensagem específica de acordo com o erro
-        let errorMessage = 'Não foi possível acessar a câmera.';
-        
-        if (fallbackErr.name === 'NotAllowedError') {
-          errorMessage = '🚫 Permissão de câmera negada. Você precisa permitir o acesso na configuração do seu navegador/dispositivo.';
-        } else if (fallbackErr.name === 'NotFoundError') {
-          errorMessage = '❌ Nenhuma câmera foi encontrada no seu dispositivo.';
-        }
-        
-        setCameraError(errorMessage);
-        showNotification(errorMessage, 'error');
       }
+      
+      setCameraInitializing(false);
+      showNotification('✅ Câmera ativada com sucesso!', 'success');
+      
+    } catch (err) {
+      console.error('❌ Erro ao acessar câmera:', err);
+      setCameraInitializing(false);
+      
+      let errorMessage = 'Não foi possível acessar a câmera.';
+      
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMessage = '🚫 Permissão de câmera negada. Por favor:';
+        errorMessage += '\n1. Clique no ícone de cadeado na barra de endereços';
+        errorMessage += '\n2. Procure por "Câmera" nas permissões';
+        errorMessage += '\n3. Altere para "Permitir"';
+        errorMessage += '\n4. Recarregue a página';
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage = '📷 Nenhuma câmera foi encontrada no seu dispositivo.';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMessage = '🔧 A câmera está sendo usada por outro aplicativo. Feche outros apps que usem câmera e tente novamente.';
+      } else if (err.name === 'OverconstrainedError' || err.name === 'ConstraintNotSatisfiedError') {
+        errorMessage = '⚙️ As configurações da câmera não são suportadas. Tente usar uma câmera diferente.';
+      }
+      
+      setCameraError(errorMessage);
+      showNotification(errorMessage, 'error');
     }
   };
 
-  // Parar câmera
   const stopCamera = () => {
     if (cameraStream) {
-      cameraStream.getTracks().forEach(track => track.stop());
+      console.log('🛑 Parando stream da câmera');
+      cameraStream.getTracks().forEach(track => {
+        track.stop();
+      });
       setCameraStream(null);
       
       if (videoRef.current) {
@@ -146,52 +183,75 @@ export default function Products() {
     }
   };
 
-  // Tirar foto
   const takePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current || !cameraStream) return;
     
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
-    // Ajustar o canvas para o tamanho do vídeo
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      showNotification('⚠️ A câmera não está pronta. Aguarde um momento.', 'warning');
+      return;
+    }
+    
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     
-    // Desenhar o frame atual do vídeo no canvas
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    // Converter para data URL (base64)
-    const photoData = canvas.toDataURL('image/jpeg', 0.8);
+    const photoData = canvas.toDataURL('image/jpeg', 0.7);
     
-    // Salvar no formulário
     setForm(f => ({ ...f, image: photoData }));
     
-    // Parar câmera e fechar modal
-    stopCamera();
-    setShowCameraModal(false);
-    
     showNotification('✅ Foto capturada com sucesso!', 'success');
+    closeCameraModal();
   };
 
-  // Abrir modal da câmera
   const openCameraModal = () => {
+    const cameraCheck = checkCameraSupport();
+    if (!cameraCheck.supported) {
+      showNotification(cameraCheck.message, 'error');
+      return;
+    }
+    
+    const userConfirmed = window.confirm(
+      '📸 Tirar foto do produto\n\n' +
+      '1. Posicione o produto em boa luz\n' +
+      '2. Mantenha a câmera estável\n' +
+      '3. Clique em "Permitir" quando o navegador solicitar acesso à câmera\n\n' +
+      'Deseja continuar?'
+    );
+    
+    if (!userConfirmed) return;
+    
     setShowCameraModal(true);
-    setTimeout(() => {
-      startCamera();
-    }, 100);
+    setCameraError(null);
   };
 
-  // Fechar modal da câmera
   const closeCameraModal = () => {
     stopCamera();
     setShowCameraModal(false);
     setCameraError(null);
+    setCameraInitializing(false);
   };
 
-  // ====== FUNÇÕES DE ESTOQUE ======
+  useEffect(() => {
+    if (showCameraModal && !cameraStream && !cameraError) {
+      const timer = setTimeout(() => {
+        startCamera();
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showCameraModal]);
 
-  // 1. Repor estoque com prompt simples
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
   const handleRestock = (productId, productName) => {
     const currentProduct = list.find(p => p.id === productId);
     if (!currentProduct) return;
@@ -204,25 +264,22 @@ export default function Products() {
     );
     
     if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
-      return; // Usuário cancelou ou valor inválido
+      return;
     }
     
     const addQty = parseInt(quantity);
     applyStockUpdate(productId, addQty);
   };
 
-  // 2. Modal para adicionar estoque com opções rápidas
   const openStockModal = (product) => {
     setStockModalProduct(product);
     setShowStockModal(true);
   };
 
-  // 3. Adicionar estoque rápido com botões +1, +5, +10
   const quickAddStock = (productId, quantity) => {
     applyStockUpdate(productId, quantity);
   };
 
-  // 4. Aplicar atualização de estoque
   const applyStockUpdate = (productId, quantity) => {
     const products = getProducts();
     const updatedProducts = products.map(p => {
@@ -240,18 +297,15 @@ export default function Products() {
     localStorage.setItem('products', JSON.stringify(updatedProducts));
     setList(updatedProducts);
     
-    // Feedback visual
     const product = products.find(p => p.id === productId);
     if (product) {
       showNotification(`✅ ${quantity} unidades adicionadas ao estoque de "${product.name}"!`, 'success');
     }
   };
 
-  // 5. Modo bulk para adicionar estoque em vários produtos
   const toggleBulkStockMode = () => {
     setBulkStockMode(!bulkStockMode);
     if (!bulkStockMode) {
-      // Reiniciar contadores quando entrar no modo bulk
       const initialUpdates = {};
       list.forEach(p => {
         initialUpdates[p.id] = 0;
@@ -260,7 +314,6 @@ export default function Products() {
     }
   };
 
-  // 6. Atualizar contador no modo bulk
   const updateBulkStock = (productId, change) => {
     setBulkStockUpdates(prev => ({
       ...prev,
@@ -268,7 +321,6 @@ export default function Products() {
     }));
   };
 
-  // 7. Aplicar todas as atualizações em bulk
   const applyBulkStock = () => {
     const hasUpdates = Object.values(bulkStockUpdates).some(val => val > 0);
     if (!hasUpdates) {
@@ -292,7 +344,6 @@ export default function Products() {
     localStorage.setItem('products', JSON.stringify(updatedProducts));
     setList(updatedProducts);
     
-    // Resetar modo bulk
     setBulkStockMode(false);
     const resetUpdates = {};
     updatedProducts.forEach(p => {
@@ -303,9 +354,7 @@ export default function Products() {
     showNotification(`✅ Estoque atualizado em ${Object.values(bulkStockUpdates).filter(v => v > 0).length} produtos!`, 'success');
   };
 
-  // Função para mostrar notificações
   const showNotification = (message, type = 'info') => {
-    // Cria elemento de notificação
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.innerHTML = `
@@ -315,7 +364,6 @@ export default function Products() {
       </div>
     `;
     
-    // Estilos para a notificação
     notification.style.cssText = `
       position: fixed;
       top: 20px;
@@ -349,10 +397,8 @@ export default function Products() {
     notification.querySelector('.notification-content').style.cssText = contentStyle;
     notification.querySelector('.notification-close').style.cssText = closeButtonStyle;
     
-    // Adiciona ao DOM
     document.body.appendChild(notification);
     
-    // Configura botão de fechar
     notification.querySelector('.notification-close').onclick = () => {
       notification.style.animation = 'slideOutRight 0.3s ease';
       setTimeout(() => {
@@ -362,7 +408,6 @@ export default function Products() {
       }, 300);
     };
     
-    // Remove automaticamente após 3 segundos
     setTimeout(() => {
       if (notification.parentNode) {
         notification.style.animation = 'slideOutRight 0.3s ease';
@@ -375,7 +420,6 @@ export default function Products() {
     }, 3000);
   };
 
-  // Converter arquivo de imagem para base64
   const handleImageChange = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -396,13 +440,10 @@ export default function Products() {
     reader.readAsDataURL(file);
   };
 
-  // Remover imagem
   const removeImage = () => {
     setForm(f => ({ ...f, image: "" }));
     showNotification('Imagem removida', 'info');
   };
-
-  // ====== FUNÇÕES EXISTENTES ======
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -494,7 +535,6 @@ export default function Products() {
       });
       setEditing(true);
       setError(null);
-      // Scroll to form
       document.querySelector('.form-card')?.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
       console.error("Erro ao preparar edição:", error);
@@ -575,11 +615,9 @@ export default function Products() {
     }
   }
 
-  // Filtrar e ordenar produtos
   const filteredAndSortedProducts = () => {
     let filtered = [...list];
     
-    // Filtrar por busca
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(p => 
@@ -588,7 +626,6 @@ export default function Products() {
       );
     }
     
-    // Ordenar
     filtered.sort((a, b) => {
       let aValue, bValue;
       
@@ -624,7 +661,6 @@ export default function Products() {
     return filtered;
   };
 
-  // Aplica filtro de topo (all | low | out)
   const applyTopFilter = (items) => {
     if (!filter || filter === 'all') return items;
     if (filter === 'low') return items.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 3));
@@ -632,7 +668,6 @@ export default function Products() {
     return items;
   };
 
-  // Define filtro e rola até a lista de produtos
   const setFilterAndScroll = (f) => {
     setFilter(f);
     setTimeout(() => {
@@ -641,7 +676,6 @@ export default function Products() {
     }, 80);
   };
 
-  // Calcular estatísticas
   const statistics = {
     totalProducts: list.length,
     lowStock: list.filter(p => p.stock > 0 && p.stock <= (p.min_stock || 3)).length,
@@ -651,7 +685,6 @@ export default function Products() {
 
   return (
     <div className="products-container">
-      {/* Header com estatísticas */}
       <div className="products-header">
         <div>
           <h1>📦 Gerenciamento de Estoque</h1>
@@ -700,7 +733,6 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Mensagem de erro */}
       {error && (
         <div className="error-banner">
           <span>⚠️ {error}</span>
@@ -710,9 +742,6 @@ export default function Products() {
         </div>
       )}
 
-      {/* Ações rápidas removidas para reduzir poluição visual */}
-
-      {/* Modo Bulk Stock */}
       {bulkStockMode && (
         <div className="card bulk-stock-card">
           <div className="bulk-stock-header">
@@ -763,7 +792,6 @@ export default function Products() {
         </div>
       )}
 
-      {/* FORM */}
       <div className="card form-card">
         <h3 className="form-title">
           {editing ? (
@@ -903,6 +931,51 @@ export default function Products() {
 
           <div className="form-group">
             <label>
+              Tipo de Venda
+              <span className="helper">Como o produto será vendido</span>
+            </label>
+            <select 
+              className="input"
+              name="saleType"
+              value={form.saleType || "unit"}
+              onChange={handleChange}
+              disabled={loading}
+            >
+              <option value="unit">📦 Por Unidade</option>
+              <option value="weight">⚖️ Por Peso (kg)</option>
+            </select>
+            <small className="helper-text">
+              💡 Se escolher "Por Peso", defina o preço por quilo
+            </small>
+          </div>
+
+          {form.saleType === "weight" && (
+            <div className="form-group">
+              <label>
+                Preço por Quilo (R$/kg) *
+                <span className="helper">Preço por 1kg do produto</span>
+                <span className="required"> *</span>
+              </label>
+              <input 
+                className="input" 
+                type="number" 
+                name="pricePerKilo" 
+                min="0.01" 
+                step="0.01"
+                placeholder="Ex: 15,50"
+                value={form.pricePerKilo} 
+                onChange={handleChange} 
+                disabled={loading}
+                required={form.saleType === "weight"}
+              />
+              <small className="helper-text">
+                📍 Na venda, você informará o peso em gramas (ex: 250g, 500g, 1000g) e o preço será calculado automaticamente
+              </small>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label>
               Estoque Atual
               <span className="helper">Quantidade disponível</span>
             </label>
@@ -994,7 +1067,6 @@ export default function Products() {
               <button 
                 className="button btn-secondary" 
                 onClick={() => {
-                  // Preenche com valores de exemplo
                   setForm({
                     ...emptyForm(),
                     name: "Novo Produto",
@@ -1017,7 +1089,6 @@ export default function Products() {
         </div>
       </div>
 
-      {/* CONTROLES DE LISTA */}
       <div className="card controls-card">
         <div className="controls-header">
           <h3>📋 Produtos Cadastrados</h3>
@@ -1101,7 +1172,6 @@ export default function Products() {
         </div>
       </div>
 
-      {/* LISTA DE PRODUTOS */}
       <div className="card list-card">
         {applyTopFilter(filteredAndSortedProducts()).length === 0 ? (
           <div className="empty-state">
@@ -1199,7 +1269,6 @@ export default function Products() {
                           Valor: R$ {(p.stock * (p.cost || 0)).toFixed(2)}
                         </div>
                         
-                        {/* Controles de estoque rápido - SEM BOTÕES +1 e +5 */}
                         {bulkStockMode ? (
                           <div className="bulk-stock-controls-row">
                             <div className="bulk-quantity">
@@ -1230,7 +1299,6 @@ export default function Products() {
                       
                       <td className="actions-cell">
                         <div className="actions-buttons">
-                          {/* Botão principal de repor estoque */}
                           <button 
                             className="button btn-success" 
                             onClick={() => handleRestock(p.id, p.name)}
@@ -1267,7 +1335,6 @@ export default function Products() {
         )}
       </div>
 
-      {/* Modal da Câmera */}
       {showCameraModal && (
         <div className="modal-overlay" onClick={closeCameraModal}>
           <div className="modal-content camera-modal" onClick={(e) => e.stopPropagation()}>
@@ -1283,72 +1350,95 @@ export default function Products() {
                 <div className="camera-error">
                   <div className="error-icon">⚠️</div>
                   <h4>Erro ao acessar câmera</h4>
-                  <p>{cameraError}</p>
-                  <button 
-                    className="button btn-secondary"
-                    onClick={startCamera}
-                  >
-                    🔄 Tentar novamente
-                  </button>
+                  <p style={{ whiteSpace: 'pre-line' }}>{cameraError}</p>
+                  <div className="camera-error-actions">
+                    <button 
+                      className="button btn-secondary"
+                      onClick={startCamera}
+                    >
+                      🔄 Tentar novamente
+                    </button>
+                    <button 
+                      className="button btn-primary"
+                      onClick={closeCameraModal}
+                    >
+                      📁 Usar arquivo em vez disso
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
                   <div className="camera-preview">
-                    <video 
-                      ref={videoRef}
-                      autoPlay 
-                      playsInline
-                      className="camera-video"
-                    ></video>
-                    <canvas 
-                      ref={canvasRef}
-                      style={{ display: 'none' }}
-                    ></canvas>
+                    {cameraInitializing ? (
+                      <div className="camera-loading">
+                        <div className="spinner"></div>
+                        <p>Inicializando câmera...</p>
+                        <small>Aguarde e permita o acesso quando solicitado</small>
+                      </div>
+                    ) : (
+                      <>
+                        <video 
+                          ref={videoRef}
+                          autoPlay 
+                          playsInline
+                          muted
+                          className="camera-video"
+                        ></video>
+                        <canvas 
+                          ref={canvasRef}
+                          style={{ display: 'none' }}
+                        ></canvas>
+                      </>
+                    )}
                   </div>
                   
                   <div className="camera-instructions">
-                    <p>📸 Posicione o produto dentro do quadro e clique em "Tirar Foto"</p>
+                    <p>📸 Posicione o produto dentro do quadro</p>
+                    <small>Garanta boa iluminação e foco</small>
                   </div>
                   
                   <div className="camera-controls">
-                    <button 
-                      className="button btn-secondary"
-                      onClick={() => {
-                        if (cameraStream) {
-                          // Trocar câmera
-                          stopCamera();
-                          setTimeout(() => {
-                            const constraints = { 
-                              video: { 
-                                facingMode: cameraStream.getVideoTracks()[0].getSettings().facingMode === 'user' ? 'environment' : 'user'
-                              },
-                              audio: false 
-                            };
-                            
-                            navigator.mediaDevices.getUserMedia(constraints)
-                              .then(newStream => {
-                                setCameraStream(newStream);
-                                if (videoRef.current) {
-                                  videoRef.current.srcObject = newStream;
-                                }
-                              })
-                              .catch(err => {
-                                console.error('Erro ao trocar câmera:', err);
-                                setCameraError('Não foi possível trocar a câmera');
-                              });
-                          }, 100);
-                        }
-                      }}
-                    >
-                      🔄 Trocar Câmera
-                    </button>
+                    {cameraStream && (
+                      <button 
+                        className="button btn-secondary"
+                        onClick={() => {
+                          if (cameraStream) {
+                            const tracks = cameraStream.getVideoTracks();
+                            if (tracks[0]) {
+                              const settings = tracks[0].getSettings();
+                              const newFacingMode = settings.facingMode === 'user' ? 'environment' : 'user';
+                              
+                              stopCamera();
+                              setTimeout(() => {
+                                navigator.mediaDevices.getUserMedia({
+                                  video: { facingMode: newFacingMode },
+                                  audio: false
+                                })
+                                .then(newStream => {
+                                  setCameraStream(newStream);
+                                  if (videoRef.current) {
+                                    videoRef.current.srcObject = newStream;
+                                  }
+                                })
+                                .catch(err => {
+                                  console.error('Erro ao trocar câmera:', err);
+                                  setCameraError('Não foi possível trocar a câmera');
+                                });
+                              }, 100);
+                            }
+                          }
+                        }}
+                      >
+                        🔄 Trocar Câmera
+                      </button>
+                    )}
                     
                     <button 
                       className="button btn-primary btn-lg"
                       onClick={takePhoto}
-                      disabled={!cameraStream}
+                      disabled={!cameraStream || cameraInitializing}
                     >
-                      📸 Tirar Foto
+                      {cameraInitializing ? '🔄 Inicializando...' : '📸 Tirar Foto'}
                     </button>
                   </div>
                 </>
@@ -1358,7 +1448,6 @@ export default function Products() {
         </div>
       )}
 
-      {/* Modal para adicionar estoque */}
       {showStockModal && stockModalProduct && (
         <div className="modal-overlay" onClick={() => setShowStockModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>

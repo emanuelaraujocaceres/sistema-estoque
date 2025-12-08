@@ -91,40 +91,92 @@ function Sales() {
 
       const stock = product.stock || product.estoque || 0;
       const name = product.name || product.nome || "";
+      const saleType = product.saleType || "unit";
       
-      if (stock <= 0) {
+      // Para produtos por peso, não verificar estoque do mesmo jeito
+      if (saleType === "unit" && stock <= 0) {
         alert(`❌ ${name} está sem estoque!`);
         return;
       }
 
-      const existingItem = cart.find(item => item.productId === product.id);
-      
-      if (existingItem) {
-        if (existingItem.qty >= stock) {
-          alert(`⚠️ Estoque máximo atingido para ${name}!`);
+      // Se for produto por peso, pedir o peso
+      if (saleType === "weight") {
+        const weightInput = prompt(
+          `⚖️ ${name}\n\nDigite o peso em gramas (ex: 250, 500, 1000):\n\nPreço por quilo: R$ ${Number(product.pricePerKilo || 0).toFixed(2)}`,
+          "1000"
+        );
+        
+        if (weightInput === null) return; // Cancelado
+        
+        const weightInGrams = parseInt(weightInput);
+        
+        if (isNaN(weightInGrams) || weightInGrams <= 0) {
+          alert("❌ Digite um peso válido em gramas!");
           return;
         }
         
-        setCart(cart.map(item =>
-          item.productId === product.id
-            ? {
-                ...item,
-                qty: item.qty + 1,
-                subtotal: (item.qty + 1) * item.unitPrice
-              }
-            : item
-        ));
+        const pricePerKilo = Number(product.pricePerKilo || 0);
+        const unitPrice = (weightInGrams / 1000) * pricePerKilo;
+        
+        const existingItem = cart.find(item => item.productId === product.id && item.weight === weightInGrams);
+        
+        if (existingItem) {
+          setCart(cart.map(item =>
+            item.productId === product.id && item.weight === weightInGrams
+              ? {
+                  ...item,
+                  qty: item.qty + 1,
+                  subtotal: (item.qty + 1) * unitPrice
+                }
+              : item
+          ));
+        } else {
+          setCart([
+            ...cart,
+            {
+              productId: product.id,
+              name: product.name || product.nome || "Produto sem nome",
+              qty: 1,
+              unitPrice: unitPrice,
+              subtotal: unitPrice,
+              weight: weightInGrams,
+              saleType: "weight",
+              pricePerKilo: pricePerKilo
+            }
+          ]);
+        }
       } else {
-        setCart([
-          ...cart,
-          {
-            productId: product.id,
-            name: product.name || product.nome || "Produto sem nome",
-            qty: 1,
-            unitPrice: Number(product.price || product.preco || 0),
-            subtotal: Number(product.price || product.preco || 0)
+        // Produto por unidade - lógica original
+        const existingItem = cart.find(item => item.productId === product.id && !item.weight);
+        
+        if (existingItem) {
+          if (existingItem.qty >= stock) {
+            alert(`⚠️ Estoque máximo atingido para ${name}!`);
+            return;
           }
-        ]);
+          
+          setCart(cart.map(item =>
+            item.productId === product.id && !item.weight
+              ? {
+                  ...item,
+                  qty: item.qty + 1,
+                  subtotal: (item.qty + 1) * item.unitPrice
+                }
+              : item
+          ));
+        } else {
+          setCart([
+            ...cart,
+            {
+              productId: product.id,
+              name: product.name || product.nome || "Produto sem nome",
+              qty: 1,
+              unitPrice: Number(product.price || product.preco || 0),
+              subtotal: Number(product.price || product.preco || 0),
+              saleType: "unit"
+            }
+          ]);
+        }
       }
 
     } catch (error) {
@@ -133,21 +185,36 @@ function Sales() {
     }
   }
 
-  function changeQty(productId, newQty) {
+  function changeQty(productId, newQty, weight = null) {
     try {
       if (newQty < 1) {
-        removeItem(productId);
+        removeItem(productId, weight);
         return;
       }
 
       const product = products.find(p => p.id === productId);
-      const item = cart.find(i => i.productId === productId);
+      const item = cart.find(i => i.productId === productId && (weight === null ? !i.weight : i.weight === weight));
 
       if (!product || !item) {
         console.warn("Produto ou item não encontrado");
         return;
       }
 
+      // Se for produto por peso, não validar estoque
+      if (item.saleType === "weight") {
+        setCart(cart.map(cartItem =>
+          cartItem.productId === productId && cartItem.weight === weight
+            ? {
+                ...cartItem,
+                qty: newQty,
+                subtotal: newQty * cartItem.unitPrice
+              }
+            : cartItem
+        ));
+        return;
+      }
+
+      // Para produtos por unidade
       const stockDisponivel = product.stock || product.estoque || 0;
 
       if (newQty > stockDisponivel) {
@@ -155,32 +222,27 @@ function Sales() {
         return;
       }
 
-      setCart(cart.map(item =>
-        item.productId === productId
+      setCart(cart.map(cartItem =>
+        cartItem.productId === productId && !cartItem.weight
           ? {
-              ...item,
+              ...cartItem,
               qty: newQty,
-              subtotal: newQty * item.unitPrice
+              subtotal: newQty * cartItem.unitPrice
             }
-          : item
+          : cartItem
       ));
 
     } catch (error) {
       console.error("Erro ao alterar quantidade:", error);
-      alert("Erro ao alterar quantidade do produto");
     }
   }
 
-  function removeItem(productId) {
+  function removeItem(productId, weight = null) {
     try {
-      const item = cart.find(i => i.productId === productId);
+      const item = cart.find(i => i.productId === productId && (weight === null ? !i.weight : i.weight === weight));
       if (!item) return;
 
-      const cartStorage = JSON.parse(localStorage.getItem('cart') || '[]');
-      const newCartStorage = cartStorage.filter(i => i.id !== productId);
-      localStorage.setItem('cart', JSON.stringify(newCartStorage));
-
-      setCart(cart.filter(i => i.productId !== productId));
+      setCart(cart.filter(i => !(i.productId === productId && (weight === null ? !i.weight : i.weight === weight))));
       
     } catch (error) {
       console.error("Erro ao remover item:", error);
