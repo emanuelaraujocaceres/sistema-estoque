@@ -1,43 +1,46 @@
-﻿import { useEffect, useState } from "react";
-import { getProducts, addProduct, updateProduct, deleteProduct, initDefaultProducts, exportData } from "../services/storage";
+﻿import { useState } from "react";
+import { useProdutos } from "../hooks/useSupabaseData";
+import { useBroadcast } from "../hooks/useBroadcast";
+import { useMigration } from "../utils/migrateToSupabase";
+import { useAuth } from "../auth/AuthContext";
 import "./Products.css";
 
 function emptyForm() { 
   return { 
     id: null, 
-    name: "", 
-    cost: "", 
-    price: "", 
-    stock: "", 
-    min_stock: "",
-    sku: ""
+    nome: "", 
+    descricao: "",
+    preco_custo: "", 
+    preco_venda: "", 
+    quantidade: "", 
+    quantidade_minima: "",
+    codigo_barras: "",
+    categoria: "",
+    unidade_medida: "un"
   }; 
 }
 
 export default function Products() {
-  const [list, setList] = useState([]);
+  const { user } = useAuth();
+  const { 
+    produtos, 
+    loading, 
+    error, 
+    create, 
+    update, 
+    remove, 
+    refetch 
+  } = useProdutos();
+  
+  const { sendMessage } = useBroadcast();
+  const { migrarProdutos } = useMigration();
+  
   const [form, setForm] = useState(emptyForm());
   const [editing, setEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("name");
+  const [sortBy, setSortBy] = useState("nome");
   const [sortOrder, setSortOrder] = useState("asc");
-
-  useEffect(() => {
-    try {
-      initDefaultProducts();
-      const products = getProducts();
-      if (!Array.isArray(products)) {
-        throw new Error("Dados de produtos inválidos");
-      }
-      setList(products);
-    } catch (error) {
-      console.error("Erro ao inicializar produtos:", error);
-      setError("Erro ao carregar produtos. Verifique o console.");
-      setList([]);
-    }
-  }, []);
+  const [showMigration, setShowMigration] = useState(false);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -48,176 +51,154 @@ export default function Products() {
   }
 
   function validateForm() {
-    if (!form.name || !form.name.trim()) {
-      setError("Nome do produto é obrigatório");
+    if (!form.nome || !form.nome.trim()) {
+      alert("Nome do produto é obrigatório");
       return false;
     }
     
-    if (!form.price || Number(form.price) <= 0) {
-      setError("Preço de venda deve ser maior que zero");
+    if (!form.preco_venda || Number(form.preco_venda) <= 0) {
+      alert("Preço de venda deve ser maior que zero");
       return false;
     }
     
-    const stock = Number(form.stock) || 0;
-    const minStock = Number(form.min_stock) || 0;
+    const quantidade = Number(form.quantidade) || 0;
+    const quantidadeMinima = Number(form.quantidade_minima) || 0;
     
-    if (stock < 0) {
-      setError("Estoque não pode ser negativo");
+    if (quantidade < 0) {
+      alert("Estoque não pode ser negativo");
       return false;
     }
     
-    if (minStock < 0) {
-      setError("Estoque mínimo não pode ser negativo");
+    if (quantidadeMinima < 0) {
+      alert("Estoque mínimo não pode ser negativo");
       return false;
     }
     
     return true;
   }
 
-  function handleAdd() {
+  async function handleAdd() {
     try {
-      setError(null);
-      
       if (!validateForm()) return;
 
-      setLoading(true);
-
-      const prod = { 
-        ...form, 
-        id: Date.now(),
-        name: form.name.trim(),
-        sku: form.sku?.trim() || "",
-        price: Number(form.price) || 0,
-        cost: Number(form.cost) || 0,
-        stock: Math.max(0, Number(form.stock) || 0),
-        min_stock: Math.max(0, Number(form.min_stock) || 0),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+      const produtoData = {
+        nome: form.nome.trim(),
+        descricao: form.descricao?.trim() || "",
+        preco_custo: Number(form.preco_custo) || 0,
+        preco_venda: Number(form.preco_venda) || 0,
+        quantidade: Math.max(0, Number(form.quantidade) || 0),
+        quantidade_minima: Math.max(0, Number(form.quantidade_minima) || 0),
+        codigo_barras: form.codigo_barras?.trim() || "",
+        categoria: form.categoria?.trim() || "",
+        unidade_medida: form.unidade_medida || "un"
       };
       
-      const newProduct = addProduct(prod);
+      const novoProduto = await create(produtoData);
       
-      if (!newProduct) {
-        throw new Error("Falha ao adicionar produto");
-      }
-      
-      setList(getProducts());
-      setForm(emptyForm());
-      setError(null);
-      
-      // Feedback visual
-      alert(`✅ Produto "${prod.name}" adicionado com sucesso!`);
-    } catch (error) {
-      console.error("Erro ao adicionar produto:", error);
-      setError(`Erro ao adicionar produto: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleEdit(p) {
-    try {
-      setForm({
-        id: p.id,
-        name: p.name || "",
-        sku: p.sku || "",
-        price: p.price?.toString() || "",
-        cost: p.cost?.toString() || "",
-        stock: p.stock?.toString() || "",
-        min_stock: p.min_stock?.toString() || ""
+      // Enviar broadcast para outros dispositivos
+      sendMessage('produto_criado', {
+        action: 'produto_adicionado',
+        produto: novoProduto,
+        userId: user?.id
       });
-      setEditing(true);
-      setError(null);
-      // Scroll to form
-      document.querySelector('.form-card')?.scrollIntoView({ behavior: 'smooth' });
-    } catch (error) {
-      console.error("Erro ao preparar edição:", error);
-      setError("Erro ao carregar dados do produto para edição");
+      
+      setForm(emptyForm());
+      alert(`✅ Produto "${novoProduto.nome}" adicionado com sucesso!`);
+      
+    } catch (err) {
+      console.error("Erro ao adicionar produto:", err);
+      alert(`❌ Erro ao adicionar produto: ${err.message}`);
     }
   }
 
-  function handleSaveEdit() {
+  function handleEdit(produto) {
+    setForm({
+      id: produto.id,
+      nome: produto.nome || "",
+      descricao: produto.descricao || "",
+      codigo_barras: produto.codigo_barras || "",
+      preco_custo: produto.preco_custo?.toString() || "",
+      preco_venda: produto.preco_venda?.toString() || "",
+      quantidade: produto.quantidade?.toString() || "",
+      quantidade_minima: produto.quantidade_minima?.toString() || "",
+      categoria: produto.categoria || "",
+      unidade_medida: produto.unidade_medida || "un"
+    });
+    setEditing(true);
+  }
+
+  async function handleSaveEdit() {
     try {
-      setError(null);
-      
       if (!validateForm()) return;
 
-      setLoading(true);
-
-      const updatedProduct = {
-        ...form,
-        name: form.name.trim(),
-        sku: form.sku?.trim() || "",
-        price: Number(form.price) || 0,
-        cost: Number(form.cost) || 0,
-        stock: Math.max(0, Number(form.stock) || 0),
-        min_stock: Math.max(0, Number(form.min_stock) || 0),
-        updated_at: new Date().toISOString()
+      const produtoData = {
+        nome: form.nome.trim(),
+        descricao: form.descricao?.trim() || "",
+        preco_custo: Number(form.preco_custo) || 0,
+        preco_venda: Number(form.preco_venda) || 0,
+        quantidade: Math.max(0, Number(form.quantidade) || 0),
+        quantidade_minima: Math.max(0, Number(form.quantidade_minima) || 0),
+        codigo_barras: form.codigo_barras?.trim() || "",
+        categoria: form.categoria?.trim() || "",
+        unidade_medida: form.unidade_medida || "un"
       };
       
-      const success = updateProduct(form.id, updatedProduct);
+      const produtoAtualizado = await update(form.id, produtoData);
       
-      if (!success) {
-        throw new Error("Falha ao atualizar produto");
-      }
+      // Enviar broadcast para outros dispositivos
+      sendMessage('produto_atualizado', {
+        action: 'produto_editado',
+        produto: produtoAtualizado,
+        userId: user?.id
+      });
       
-      setList(getProducts());
       setForm(emptyForm());
       setEditing(false);
-      setError(null);
+      alert(`✅ Produto "${produtoAtualizado.nome}" atualizado com sucesso!`);
       
-      alert(`✅ Produto "${updatedProduct.name}" atualizado com sucesso!`);
-    } catch (error) {
-      console.error("Erro ao atualizar produto:", error);
-      setError(`Erro ao atualizar produto: ${error.message}`);
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error("Erro ao atualizar produto:", err);
+      alert(`❌ Erro ao atualizar produto: ${err.message}`);
     }
   }
 
   function handleCancel() {
     setForm(emptyForm());
     setEditing(false);
-    setError(null);
   }
 
-  function handleDelete(id, name) {
+  async function handleDelete(id, nome) {
     try {
-      if (!window.confirm(`⚠️ Tem certeza que deseja excluir o produto "${name}"?\n\nEsta ação não pode ser desfeita.`)) return;
+      if (!window.confirm(`⚠️ Tem certeza que deseja excluir o produto "${nome}"?\n\nEsta ação não pode ser desfeita.`)) return;
 
-      const success = deleteProduct(id);
+      await remove(id);
       
-      if (!success) {
-        throw new Error("Falha ao excluir produto");
-      }
+      // Enviar broadcast para outros dispositivos
+      sendMessage('produto_removido', {
+        action: 'produto_excluido',
+        produtoId: id,
+        nome: nome,
+        userId: user?.id
+      });
       
-      setList(getProducts());
-      alert(`🗑️ Produto "${name}" excluído com sucesso!`);
-    } catch (error) {
-      console.error("Erro ao excluir produto:", error);
-      alert(`❌ Erro ao excluir produto: ${error.message}`);
-    }
-  }
-
-  function handleExport() {
-    try {
-      exportData();
-    } catch (error) {
-      console.error("Erro ao exportar dados:", error);
-      alert("Erro ao exportar dados");
+      alert(`🗑️ Produto "${nome}" excluído com sucesso!`);
+    } catch (err) {
+      console.error("Erro ao excluir produto:", err);
+      alert(`❌ Erro ao excluir produto: ${err.message}`);
     }
   }
 
   // Filtrar e ordenar produtos
   const filteredAndSortedProducts = () => {
-    let filtered = [...list];
+    let filtered = [...(produtos || [])];
     
     // Filtrar por busca
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter(p => 
-        p.name?.toLowerCase().includes(query) ||
-        p.sku?.toLowerCase().includes(query)
+        p.nome?.toLowerCase().includes(query) ||
+        p.codigo_barras?.toLowerCase().includes(query) ||
+        p.descricao?.toLowerCase().includes(query)
       );
     }
     
@@ -226,25 +207,25 @@ export default function Products() {
       let aValue, bValue;
       
       switch (sortBy) {
-        case "name":
-          aValue = a.name?.toLowerCase() || "";
-          bValue = b.name?.toLowerCase() || "";
+        case "nome":
+          aValue = a.nome?.toLowerCase() || "";
+          bValue = b.nome?.toLowerCase() || "";
           break;
-        case "price":
-          aValue = Number(a.price) || 0;
-          bValue = Number(b.price) || 0;
+        case "preco_venda":
+          aValue = Number(a.preco_venda) || 0;
+          bValue = Number(b.preco_venda) || 0;
           break;
-        case "stock":
-          aValue = Number(a.stock) || 0;
-          bValue = Number(b.stock) || 0;
+        case "quantidade":
+          aValue = Number(a.quantidade) || 0;
+          bValue = Number(b.quantidade) || 0;
           break;
-        case "last_update":
-          aValue = new Date(a.updated_at || a.created_at || 0).getTime();
-          bValue = new Date(b.updated_at || b.created_at || 0).getTime();
+        case "atualizado_em":
+          aValue = new Date(a.atualizado_em || a.criado_em || 0).getTime();
+          bValue = new Date(b.atualizado_em || b.criado_em || 0).getTime();
           break;
         default:
-          aValue = a.name?.toLowerCase() || "";
-          bValue = b.name?.toLowerCase() || "";
+          aValue = a.nome?.toLowerCase() || "";
+          bValue = b.nome?.toLowerCase() || "";
       }
       
       if (sortOrder === "asc") {
@@ -259,19 +240,98 @@ export default function Products() {
 
   // Calcular estatísticas
   const statistics = {
-    totalProducts: list.length,
-    lowStock: list.filter(p => p.stock <= (p.min_stock || 0) || p.stock <= 3).length,
-    outOfStock: list.filter(p => p.stock <= 0).length,
-    totalValue: list.reduce((sum, p) => sum + (p.stock * (p.cost || 0)), 0)
+    totalProducts: produtos?.length || 0,
+    lowStock: produtos?.filter(p => p.quantidade <= (p.quantidade_minima || 0) || p.quantidade <= 3).length || 0,
+    outOfStock: produtos?.filter(p => p.quantidade <= 0).length || 0,
+    totalValue: produtos?.reduce((sum, p) => sum + (p.quantidade * (p.preco_custo || 0)), 0) || 0
   };
+
+  // Verificar se há dados locais para migrar
+  const hasLocalData = () => {
+    const produtosLocais = localStorage.getItem('produtos');
+    return produtosLocais && JSON.parse(produtosLocais).length > 0;
+  };
+
+  if (loading && produtos.length === 0) {
+    return (
+      <div className="products-container loading">
+        <div className="spinner"></div>
+        <p>Carregando produtos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="products-container">
+      {/* Botão de Migração (se houver dados locais) */}
+      {hasLocalData() && (
+        <div className="migration-banner">
+          <div className="migration-content">
+            <span>🔄 Você tem dados locais que podem ser migrados para a nuvem!</span>
+            <button 
+              className="button btn-primary btn-sm"
+              onClick={() => setShowMigration(true)}
+            >
+              Migrar Agora
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Migração */}
+      {showMigration && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>🔄 Migrar para Nuvem</h3>
+              <button className="modal-close" onClick={() => setShowMigration(false)}>
+                ✕
+              </button>
+            </div>
+            <div className="modal-content">
+              <div className="migration-info">
+                <p>Migrar todos os produtos do <strong>localStorage</strong> para o <strong>Supabase</strong>.</p>
+                <p><strong>Benefícios:</strong></p>
+                <ul>
+                  <li>✅ Sincronização entre dispositivos</li>
+                  <li>✅ Backup automático</li>
+                  <li>✅ Acesso de qualquer lugar</li>
+                  <li>✅ Trabalho em equipe</li>
+                </ul>
+                <p><strong>Atenção:</strong> Após migrar, os dados locais serão removidos.</p>
+                
+                <div className="modal-actions">
+                  <button 
+                    className="button btn-primary"
+                    onClick={async () => {
+                      const resultado = await migrarProdutos();
+                      alert(resultado.message);
+                      setShowMigration(false);
+                      refetch(); // Recarregar produtos
+                    }}
+                  >
+                    Iniciar Migração
+                  </button>
+                  <button 
+                    className="button btn-secondary"
+                    onClick={() => setShowMigration(false)}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header com estatísticas */}
       <div className="products-header">
         <div>
           <h1>📦 Gerenciamento de Estoque</h1>
-          <p className="subtitle">Gerencie todos os produtos do seu estoque</p>
+          <p className="subtitle">
+            {produtos?.length || 0} produtos cadastrados • Sincronizado em tempo real
+          </p>
         </div>
         
         <div className="header-stats">
@@ -304,9 +364,9 @@ export default function Products() {
       {/* Mensagem de erro */}
       {error && (
         <div className="error-banner">
-          <span>⚠️ {error}</span>
-          <button onClick={() => setError(null)} className="button btn-sm btn-secondary">
-            Fechar
+          <span>⚠️ {error.message}</span>
+          <button onClick={refetch} className="button btn-sm btn-secondary">
+            Tentar Novamente
           </button>
         </div>
       )}
@@ -335,24 +395,47 @@ export default function Products() {
             </label>
             <input
               className="input"
-              name="name"
+              name="nome"
               placeholder="Ex: Café Premium 500g"
-              value={form.name}
+              value={form.nome}
               onChange={handleChange}
-              disabled={loading}
               maxLength="100"
             />
           </div>
 
           <div className="form-group">
-            <label>Código (SKU)</label>
+            <label>Código (SKU/Código de Barras)</label>
             <input 
               className="input" 
-              name="sku"
-              placeholder="Ex: CAF-500-PRM"
-              value={form.sku} 
+              name="codigo_barras"
+              placeholder="Ex: CAF-500-PRM ou 7891234567890"
+              value={form.codigo_barras} 
               onChange={handleChange} 
-              disabled={loading}
+              maxLength="50"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Descrição</label>
+            <textarea 
+              className="input" 
+              name="descricao"
+              placeholder="Descrição detalhada do produto..."
+              value={form.descricao} 
+              onChange={handleChange} 
+              rows="2"
+              maxLength="500"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Categoria</label>
+            <input 
+              className="input" 
+              name="categoria"
+              placeholder="Ex: Bebidas, Limpeza, etc."
+              value={form.categoria} 
+              onChange={handleChange} 
               maxLength="50"
             />
           </div>
@@ -365,13 +448,12 @@ export default function Products() {
             <input 
               className="input" 
               type="number" 
-              name="cost" 
+              name="preco_custo" 
               min="0" 
               step="0.01"
               placeholder="0,00"
-              value={form.cost} 
+              value={form.preco_custo} 
               onChange={handleChange} 
-              disabled={loading}
             />
           </div>
 
@@ -384,13 +466,12 @@ export default function Products() {
             <input 
               className="input" 
               type="number" 
-              name="price" 
+              name="preco_venda" 
               min="0.01" 
               step="0.01"
               placeholder="0,00"
-              value={form.price} 
+              value={form.preco_venda} 
               onChange={handleChange} 
-              disabled={loading}
               required
             />
           </div>
@@ -403,12 +484,11 @@ export default function Products() {
             <input 
               className="input" 
               type="number" 
-              name="stock" 
+              name="quantidade" 
               min="0"
               placeholder="0"
-              value={form.stock} 
+              value={form.quantidade} 
               onChange={handleChange} 
-              disabled={loading}
             />
           </div>
 
@@ -420,13 +500,30 @@ export default function Products() {
             <input 
               className="input" 
               type="number" 
-              name="min_stock" 
+              name="quantidade_minima" 
               min="0"
               placeholder="0"
-              value={form.min_stock} 
+              value={form.quantidade_minima} 
               onChange={handleChange} 
-              disabled={loading}
             />
+          </div>
+
+          <div className="form-group">
+            <label>Unidade de Medida</label>
+            <select 
+              className="input" 
+              name="unidade_medida"
+              value={form.unidade_medida} 
+              onChange={handleChange}
+            >
+              <option value="un">Unidade (un)</option>
+              <option value="kg">Quilograma (kg)</option>
+              <option value="g">Grama (g)</option>
+              <option value="L">Litro (L)</option>
+              <option value="ml">Mililitro (ml)</option>
+              <option value="cx">Caixa (cx)</option>
+              <option value="pct">Pacote (pct)</option>
+            </select>
           </div>
         </div>
 
@@ -436,14 +533,12 @@ export default function Products() {
               <button 
                 className="button btn-success" 
                 onClick={handleSaveEdit}
-                disabled={loading}
               >
-                {loading ? "Salvando..." : "💾 Salvar Alterações"}
+                💾 Salvar Alterações
               </button>
               <button 
                 className="button btn-secondary" 
                 onClick={handleCancel}
-                disabled={loading}
               >
                 ❌ Cancelar
               </button>
@@ -452,9 +547,8 @@ export default function Products() {
             <button 
               className="button btn-primary" 
               onClick={handleAdd}
-              disabled={loading}
             >
-              {loading ? "Adicionando..." : "➕ Adicionar Produto"}
+              ➕ Adicionar Produto
             </button>
           )}
         </div>
@@ -471,17 +565,10 @@ export default function Products() {
           <div className="controls-actions">
             <button 
               className="button btn-secondary" 
-              onClick={() => setList(getProducts())}
+              onClick={refetch}
               disabled={loading}
             >
               🔄 Atualizar
-            </button>
-            <button 
-              className="button btn-success" 
-              onClick={handleExport}
-              disabled={loading}
-            >
-              📤 Exportar
             </button>
           </div>
         </div>
@@ -491,10 +578,9 @@ export default function Products() {
             <input
               type="text"
               className="input search-input"
-              placeholder="Buscar por nome ou SKU..."
+              placeholder="Buscar por nome, código ou descrição..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              disabled={loading}
             />
             {searchQuery && (
               <button 
@@ -512,18 +598,16 @@ export default function Products() {
               className="input select-sm" 
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
-              disabled={loading}
             >
-              <option value="name">Nome</option>
-              <option value="price">Preço</option>
-              <option value="stock">Estoque</option>
-              <option value="last_update">Última atualização</option>
+              <option value="nome">Nome</option>
+              <option value="preco_venda">Preço</option>
+              <option value="quantidade">Estoque</option>
+              <option value="atualizado_em">Última atualização</option>
             </select>
             
             <button 
               className={`sort-order-btn ${sortOrder === 'asc' ? 'active' : ''}`}
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              disabled={loading}
               title={sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}
             >
               {sortOrder === 'asc' ? '↑' : '↓'}
@@ -533,7 +617,7 @@ export default function Products() {
 
         <div className="list-stats">
           <span className="stat-item">
-            <strong>{filteredAndSortedProducts().length}</strong> de <strong>{list.length}</strong> produtos
+            <strong>{filteredAndSortedProducts().length}</strong> de <strong>{produtos?.length || 0}</strong> produtos
           </span>
           {searchQuery && (
             <span className="stat-item">
@@ -553,12 +637,16 @@ export default function Products() {
             <h4>
               {searchQuery 
                 ? "Nenhum produto encontrado" 
-                : "Nenhum produto cadastrado"}
+                : produtos?.length === 0 
+                  ? "Nenhum produto cadastrado" 
+                  : "Produtos carregados"}
             </h4>
             <p>
               {searchQuery 
                 ? `Nenhum produto corresponde à busca "${searchQuery}"`
-                : "Adicione seu primeiro produto usando o formulário acima"}
+                : produtos?.length === 0
+                  ? "Adicione seu primeiro produto usando o formulário acima"
+                  : "Use os filtros acima para buscar produtos"}
             </p>
             {searchQuery && (
               <button 
@@ -584,36 +672,38 @@ export default function Products() {
               </thead>
               <tbody>
                 {filteredAndSortedProducts().map(p => {
-                  const isLowStock = p.stock <= (p.min_stock || 0) || p.stock <= 3;
-                  const isOutOfStock = p.stock <= 0;
+                  const isLowStock = p.quantidade <= (p.quantidade_minima || 0) || p.quantidade <= 3;
+                  const isOutOfStock = p.quantidade <= 0;
                   
                   return (
                     <tr key={p.id} className={isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : ''}>
                       <td className="product-cell">
                         <div className="product-main">
-                          <strong>{p.name}</strong>
-                          {p.sku && <div className="sku-text">SKU: {p.sku}</div>}
+                          <strong>{p.nome}</strong>
+                          {p.codigo_barras && <div className="sku-text">Código: {p.codigo_barras}</div>}
+                          {p.descricao && <div className="desc-text">{p.descricao}</div>}
+                          {p.categoria && <div className="category-badge">{p.categoria}</div>}
                         </div>
-                        {p.updated_at && (
+                        {p.atualizado_em && (
                           <div className="update-time">
-                            Atualizado: {new Date(p.updated_at).toLocaleDateString('pt-BR')}
+                            Atualizado: {new Date(p.atualizado_em).toLocaleDateString('pt-BR')}
                           </div>
                         )}
                       </td>
                       
                       <td className="cost-cell">
                         <div className="price-display">
-                          R$ {Number(p.cost || 0).toFixed(2)}
+                          R$ {Number(p.preco_custo || 0).toFixed(2)}
                         </div>
                       </td>
                       
                       <td className="price-cell">
                         <div className="price-display highlight">
-                          R$ {Number(p.price || 0).toFixed(2)}
+                          R$ {Number(p.preco_venda || 0).toFixed(2)}
                         </div>
-                        {p.cost > 0 && (
+                        {p.preco_custo > 0 && (
                           <div className="margin-info">
-                            Margem: {((p.price - p.cost) / p.cost * 100).toFixed(1)}%
+                            Margem: {((p.preco_venda - p.preco_custo) / p.preco_custo * 100).toFixed(1)}%
                           </div>
                         )}
                       </td>
@@ -621,16 +711,16 @@ export default function Products() {
                       <td className="stock-cell">
                         <div className="stock-display">
                           <span className={`stock-badge ${isOutOfStock ? 'stock-out' : isLowStock ? 'stock-low' : 'stock-ok'}`}>
-                            {p.stock || 0}
+                            {p.quantidade || 0} {p.unidade_medida || 'un'}
                           </span>
-                          {p.min_stock > 0 && (
+                          {p.quantidade_minima > 0 && (
                             <div className="min-stock">
-                              Mín: {p.min_stock}
+                              Mín: {p.quantidade_minima}
                             </div>
                           )}
                         </div>
                         <div className="stock-value">
-                          Valor: R$ {(p.stock * (p.cost || 0)).toFixed(2)}
+                          Valor: R$ {(p.quantidade * (p.preco_custo || 0)).toFixed(2)}
                         </div>
                       </td>
                       
@@ -645,15 +735,13 @@ export default function Products() {
                           <button 
                             className="button btn-edit" 
                             onClick={() => handleEdit(p)}
-                            disabled={loading}
                             title="Editar produto"
                           >
                             ✏️
                           </button>
                           <button 
                             className="button btn-danger" 
-                            onClick={() => handleDelete(p.id, p.name)}
-                            disabled={loading}
+                            onClick={() => handleDelete(p.id, p.nome)}
                             title="Excluir produto"
                           >
                             🗑️
@@ -674,7 +762,7 @@ export default function Products() {
         <h3>💰 Resumo do Valor do Estoque</h3>
         <div className="summary-grid">
           <div className="summary-item">
-            <div className="summary-label">Valor Total do Estoque</div>
+            <div className="summary-label">Valor Total do Estoque (Custo)</div>
             <div className="summary-value">R$ {statistics.totalValue.toFixed(2)}</div>
             <div className="summary-sub">Custo de aquisição</div>
           </div>
@@ -682,7 +770,7 @@ export default function Products() {
           <div className="summary-item">
             <div className="summary-label">Valor de Venda Total</div>
             <div className="summary-value">
-              R$ {list.reduce((sum, p) => sum + (p.stock * (p.price || 0)), 0).toFixed(2)}
+              R$ {(produtos?.reduce((sum, p) => sum + (p.quantidade * (p.preco_venda || 0)), 0) || 0).toFixed(2)}
             </div>
             <div className="summary-sub">Preço de venda</div>
           </div>
@@ -690,7 +778,7 @@ export default function Products() {
           <div className="summary-item">
             <div className="summary-label">Lucro Potencial</div>
             <div className="summary-value success">
-              R$ {list.reduce((sum, p) => sum + (p.stock * ((p.price || 0) - (p.cost || 0))), 0).toFixed(2)}
+              R$ {(produtos?.reduce((sum, p) => sum + (p.quantidade * ((p.preco_venda || 0) - (p.preco_custo || 0))), 0) || 0).toFixed(2)}
             </div>
             <div className="summary-sub">Diferença total</div>
           </div>
