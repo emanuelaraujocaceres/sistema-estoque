@@ -1002,7 +1002,7 @@ export default function Products() {
 
           <div className="form-group">
             <label>
-              Custo (R$)
+              {form.saleType === 'weight' ? 'Custo (R$/kg)' : 'Custo (R$)'}
               <span className="helper">Custo de aquisição</span>
             </label>
             <input 
@@ -1016,6 +1016,11 @@ export default function Products() {
               onChange={handleChange} 
               disabled={loading}
             />
+            <small className="helper-text">
+              {form.saleType === 'weight'
+                ? 'Informe o custo por quilo (R$/kg). Se você pagou um valor total, divida pelo total de kg (ex: 10kg por R$30 → informe R$3.00).'
+                : 'Custo de aquisição por unidade.'}
+            </small>
           </div>
 
           <div className="form-group">
@@ -1353,7 +1358,11 @@ export default function Products() {
                       
                       <td className="cost-cell">
                         <div className="price-display">
-                          R$ {Number(p.cost || 0).toFixed(2)}
+                          {p.saleType === 'weight' ? (
+                            <>R$ {Number(p.cost || 0).toFixed(2)} /kg</>
+                          ) : (
+                            <>R$ {Number(p.cost || 0).toFixed(2)}</>
+                          )}
                         </div>
                       </td>
                       
