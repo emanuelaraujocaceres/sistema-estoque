@@ -24,6 +24,8 @@ export const ProductsProvider = ({ children }) => {
             cost: product.cost || product.custo || 0,
             stock: product.stock || product.estoque || 0,
             min_stock: product.min_stock || product.minEstoque || 0,
+            saleType: product.saleType || product.tipoVenda || 'unit',
+            pricePerKilo: product.pricePerKilo || product.precoPorKilo || undefined,
             created_at: product.created_at || new Date().toISOString(),
             updated_at: product.updated_at || new Date().toISOString()
           }));
@@ -48,6 +50,8 @@ export const ProductsProvider = ({ children }) => {
         cost: product.cost || 0,
         stock: product.stock || 0,
         min_stock: product.min_stock || 0,
+        saleType: product.saleType || 'unit',
+        pricePerKilo: product.saleType === 'weight' ? (product.pricePerKilo || product.price) : undefined,
         created_at: product.created_at || new Date().toISOString(),
         updated_at: product.updated_at || new Date().toISOString()
       }));
@@ -121,6 +125,8 @@ export const ProductsProvider = ({ children }) => {
       cost: parseFloat(productData.cost) || 0,
       stock: Math.max(0, parseInt(productData.stock) || 0),
       min_stock: Math.max(0, parseInt(productData.min_stock) || 0),
+      saleType: productData.saleType || 'unit',
+      pricePerKilo: productData.saleType === 'weight' ? (Number(productData.pricePerKilo) || Number(productData.price) || 0) : undefined,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -138,10 +144,12 @@ export const ProductsProvider = ({ children }) => {
             ...product, 
             name: updatedData.name || product.name,
             sku: updatedData.sku || product.sku,
-            price: parseFloat(updatedData.price) || product.price,
+            price: updatedData.saleType === 'weight' ? (Number(updatedData.pricePerKilo) || Number(updatedData.price) || product.price) : (parseFloat(updatedData.price) || product.price),
             cost: parseFloat(updatedData.cost) || product.cost,
             stock: Math.max(0, parseInt(updatedData.stock) || product.stock),
             min_stock: Math.max(0, parseInt(updatedData.min_stock) || product.min_stock),
+            saleType: updatedData.saleType || product.saleType || 'unit',
+            pricePerKilo: updatedData.saleType === 'weight' ? (Number(updatedData.pricePerKilo) || product.pricePerKilo) : undefined,
             updated_at: new Date().toISOString()
           };
         }

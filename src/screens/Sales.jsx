@@ -168,6 +168,10 @@ function Sales() {
       }
 
       const pricePerKilo = Number(product.pricePerKilo || 0);
+      if (!pricePerKilo || pricePerKilo <= 0) {
+        alert(`❌ Produto "${name}" não possui preço por quilo definido.`);
+        return;
+      }
       const unitPrice = (weightInGrams / 1000) * pricePerKilo;
 
       const existingItem = cart.find(item => item.productId === product.id && item.weight === weightInGrams);
@@ -466,7 +470,11 @@ function Sales() {
                           </div>
                           
                           <div className="product-price">
-                            R$ {Number(product.price || product.preco || 0).toFixed(2)}
+                            {product.saleType === 'weight' ? (
+                              <>R$ {Number(product.pricePerKilo || product.price || 0).toFixed(2)} /kg</>
+                            ) : (
+                              <>R$ {Number(product.price || product.preco || 0).toFixed(2)}</>
+                            )}
                           </div>
                           
                           <div className={`product-stock ${isOutOfStock ? "stock-out" : isLowStock ? "stock-low" : "stock-ok"}`}>
