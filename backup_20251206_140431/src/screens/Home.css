@@ -11,6 +11,104 @@
   to { opacity: 1; }
 }
 
+/* ====== INDICADOR DE CONEXÃO ====== */
+.connection-status {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 6px 12px;
+  border-radius: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-dot.connected {
+  color: #10b981; /* Verde */
+  animation: pulse 2s infinite;
+}
+
+.status-dot.disconnected {
+  color: #ef4444; /* Vermelho */
+  animation: blink 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7; 
+    transform: scale(1.1);
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ====== NOTIFICAÇÕES ====== */
+.notification {
+  position: fixed;
+  top: 60px;
+  right: 10px;
+  background: white;
+  border-left: 4px solid #3b82f6;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 999;
+  max-width: 300px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.notification.success {
+  border-left-color: #10b981;
+}
+
+.notification.warning {
+  border-left-color: #f59e0b;
+}
+
+.notification.error {
+  border-left-color: #ef4444;
+}
+
+.notification.info {
+  border-left-color: #3b82f6;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 /* Header */
 .home-header {
   background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
@@ -726,7 +824,7 @@
   background: rgba(247, 37, 133, 0.1);
 }
 
-/* Responsividade */
+/* ====== RESPONSIVIDADE ====== */
 @media (max-width: 1200px) {
   .header-content {
     flex-direction: column;
@@ -747,6 +845,17 @@
 }
 
 @media (max-width: 768px) {
+  .connection-status {
+    top: 5px;
+    right: 5px;
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+  
+  .connection-status small {
+    font-size: 9px;
+  }
+  
   .home-header {
     padding: var(--space-lg);
   }
@@ -860,4 +969,47 @@
 
 .modal::-webkit-scrollbar-thumb:hover {
   background: var(--gray-500);
+}
+
+/* Variáveis CSS (se não estiverem definidas em outro lugar) */
+:root {
+  --primary: #4361ee;
+  --primary-dark: #3a56d4;
+  --primary-light: #eef2ff;
+  --secondary: #7209b7;
+  --success: #10b981;
+  --success-dark: #0da271;
+  --info: #4895ef;
+  --info-dark: #3a7bc8;
+  --warning: #f59e0b;
+  --warning-dark: #d97706;
+  --warning-light: #fef3c7;
+  --danger: #f72585;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --z-modal: 1000;
 }
