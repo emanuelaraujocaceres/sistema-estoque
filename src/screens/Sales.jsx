@@ -6,12 +6,23 @@ import "./Sales.css";
 function Sales() {
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState([]);
+  const [weightInputs, setWeightInputs] = useState({});
   const [payment, setPayment] = useState("dinheiro");
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   
   const { products } = useStock();
+
+  const formatStock = (product) => {
+    if (!product) return '';
+    const stock = Number(product.stock || 0);
+    if (product.saleType === 'weight') {
+      if (stock >= 1000) return `${(stock/1000).toFixed(3).replace(/\.?0+$/,'')} kg (${stock} g)`;
+      return `${stock} g`;
+    }
+    return `${stock} unidades`;
+  };
 
   useEffect(() => {
     const loadLatestProducts = () => {
@@ -84,104 +95,103 @@ function Sales() {
   }
 
   function addToCart(product) {
+    // New behavior: accept a weight value provided in weightInputs state for weight products
     try {
-      if (!product || !product.id) {
-        throw new Error("Produto inválido");
-      }
+      if (!product || !product.id) throw new Error("Produto inválido");
 
       const stock = product.stock || product.estoque || 0;
       const name = product.name || product.nome || "";
       const saleType = product.saleType || "unit";
-      
-      // Para produtos por peso, não verificar estoque do mesmo jeito
-      if (saleType === "unit" && stock <= 0) {
-        alert(`❌ ${name} está sem estoque!`);
-        return;
-      }
 
-      // Se for produto por peso, pedir o peso
-      if (saleType === "weight") {
-        const weightInput = prompt(
-          `⚖️ ${name}\n\nDigite o peso em gramas (ex: 250, 500, 1000):\n\nPreço por quilo: R$ ${Number(product.pricePerKilo || 0).toFixed(2)}`,
-          "1000"
-        );
-        
-        if (weightInput === null) return; // Cancelado
-        
-        const weightInGrams = parseInt(weightInput);
-        
-        if (isNaN(weightInGrams) || weightInGrams <= 0) {
-          alert("❌ Digite um peso válido em gramas!");
+      if (saleType === "unit") {
+        if (stock <= 0) {
+          alert(`❌ ${name} está sem estoque!`);
           return;
         }
-        
-        const pricePerKilo = Number(product.pricePerKilo || 0);
-        const unitPrice = (weightInGrams / 1000) * pricePerKilo;
-        
-        const existingItem = cart.find(item => item.productId === product.id && item.weight === weightInGrams);
-        
-        if (existingItem) {
-          setCart(cart.map(item =>
-            item.productId === product.id && item.weight === weightInGrams
-              ? {
-                  ...item,
-                  qty: item.qty + 1,
-                  subtotal: (item.qty + 1) * unitPrice
-                }
-              : item
-          ));
-        } else {
-          setCart([
-            ...cart,
-            {
-              productId: product.id,
-              name: product.name || product.nome || "Produto sem nome",
-              qty: 1,
-              unitPrice: unitPrice,
-              subtotal: unitPrice,
-              weight: weightInGrams,
-              saleType: "weight",
-              pricePerKilo: pricePerKilo
-            }
-          ]);
-        }
-      } else {
-        // Produto por unidade - lógica original
+
         const existingItem = cart.find(item => item.productId === product.id && !item.weight);
-        
         if (existingItem) {
           if (existingItem.qty >= stock) {
             alert(`⚠️ Estoque máximo atingido para ${name}!`);
             return;
           }
-          
           setCart(cart.map(item =>
             item.productId === product.id && !item.weight
-              ? {
-                  ...item,
-                  qty: item.qty + 1,
-                  subtotal: (item.qty + 1) * item.unitPrice
-                }
+              ? { ...item, qty: item.qty + 1, subtotal: (item.qty + 1) * item.unitPrice }
               : item
           ));
         } else {
-          setCart([
-            ...cart,
-            {
-              productId: product.id,
-              name: product.name || product.nome || "Produto sem nome",
-              qty: 1,
-              unitPrice: Number(product.price || product.preco || 0),
-              subtotal: Number(product.price || product.preco || 0),
-              saleType: "unit"
-            }
-          ]);
+          setCart([ ...cart, {
+            productId: product.id,
+            name: product.name || product.nome || "Produto sem nome",
+            qty: 1,
+            unitPrice: Number(product.price || product.preco || 0),
+            subtotal: Number(product.price || product.preco || 0),
+            saleType: "unit"
+          }]);
         }
+        return;
+      }
+
+      // saleType === 'weight'
+      const rawWeight = weightInputs[product.id];
+      if (!rawWeight) {
+        alert('⚠️ Informe o peso em gramas no campo ao lado do produto antes de adicionar');
+        return;
+      }
+
+      // parse weight: accept '250', '250g', '1.5kg', '1,5kg'
+      const parseGrams = (val) => {
+        if (val == null) return null;
+        const s = String(val).trim().toLowerCase().replace(',', '.');
+        if (!s) return null;
+        if (s.endsWith('kg')) {
+          const num = parseFloat(s.replace('kg','').trim());
+          return Number.isNaN(num) ? null : Math.round(num * 1000);
+        }
+        if (s.endsWith('g')) {
+          const num = parseFloat(s.replace('g','').trim());
+          return Number.isNaN(num) ? null : Math.round(num);
+        }
+        if (s.includes('.')) {
+          const num = parseFloat(s);
+          return Number.isNaN(num) ? null : Math.round(num * 1000);
+        }
+        const num = parseInt(s.replace(/[^0-9]/g,''), 10);
+        return Number.isNaN(num) ? null : num;
+      };
+
+      const weightInGrams = parseGrams(rawWeight);
+      if (!weightInGrams || weightInGrams <= 0) {
+        alert('❌ Digite um peso válido em gramas (ex: 250, 500 ou 1.5kg)');
+        return;
+      }
+
+      const pricePerKilo = Number(product.pricePerKilo || 0);
+      const unitPrice = (weightInGrams / 1000) * pricePerKilo;
+
+      const existingItem = cart.find(item => item.productId === product.id && item.weight === weightInGrams);
+      if (existingItem) {
+        setCart(cart.map(item => item.productId === product.id && item.weight === weightInGrams
+          ? { ...item, qty: item.qty + 1, subtotal: (item.qty + 1) * unitPrice }
+          : item
+        ));
+      } else {
+        setCart([ ...cart, {
+          productId: product.id,
+          name: product.name || product.nome || 'Produto sem nome',
+          qty: 1,
+          unitPrice: unitPrice,
+          subtotal: unitPrice,
+          weight: weightInGrams,
+          saleType: 'weight',
+          pricePerKilo: pricePerKilo
+        }]);
       }
 
     } catch (error) {
-      console.error("Erro ao adicionar ao carrinho:", error);
-      alert("Erro ao adicionar produto ao carrinho");
+      console.error('Erro ao adicionar ao carrinho:', error);
+      alert('Erro ao adicionar produto ao carrinho');
     }
   }
 
@@ -269,10 +279,18 @@ function Sales() {
         if (!product) {
           throw new Error(`Produto ${item.name} não encontrado`);
         }
-        
-        const stockDisponivel = product.stock || product.estoque || 0;
-        if (stockDisponivel < item.qty) {
-          throw new Error(`Estoque insuficiente para ${item.name}\nDisponível: ${stockDisponivel}, Solicitado: ${item.qty}`);
+        // Validação de estoque: se for produto por peso, `stock` é em gramas
+        if (product.saleType === 'weight') {
+          const totalGramsNeeded = (Number(item.weight || 0) * Number(item.qty || 0));
+          const stockGrams = Number(product.stock || 0);
+          if (stockGrams < totalGramsNeeded) {
+            throw new Error(`Estoque insuficiente para ${item.name}\nDisponível: ${stockGrams}g, Solicitado: ${totalGramsNeeded}g`);
+          }
+        } else {
+          const stockDisponivel = product.stock || product.estoque || 0;
+          if (stockDisponivel < item.qty) {
+            throw new Error(`Estoque insuficiente para ${item.name}\nDisponível: ${stockDisponivel}, Solicitado: ${item.qty}`);
+          }
         }
       }
 
@@ -281,6 +299,7 @@ function Sales() {
           productId: item.productId,
           name: item.name,
           qty: item.qty,
+          weight: item.weight, // em gramas para produtos por peso
           unitPrice: item.unitPrice,
           subtotal: item.subtotal
         })),
@@ -296,10 +315,8 @@ function Sales() {
 
       setCart([]);
       localStorage.removeItem('cart');
-
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Não forçar reload; eventos de storage já atualizam o restante da UI
+      setLoading(false);
 
     } catch (error) {
       console.error("Erro ao finalizar venda:", error);
@@ -320,13 +337,7 @@ function Sales() {
   const filteredProducts = searchProducts();
   const totalVenda = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
-  const setSelectedCategoryAndScroll = (cat) => {
-    setSelectedCategory(cat);
-    setTimeout(() => {
-      const el = document.querySelector('.products-list');
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 80);
-  };
+  // removed unused helper setSelectedCategoryAndScroll
 
   return (
     <div className="sales-page-container">
@@ -436,7 +447,6 @@ function Sales() {
                       const isLowStock = stock > 0 && stock <= minStock;
                       const isOutOfStock = stock <= 0;
                       const statusText = isOutOfStock ? 'Sem Estoque' : isLowStock ? 'Estoque Baixo' : 'Em Estoque';
-                      const statusColor = isOutOfStock ? '#dc2626' : isLowStock ? '#d97706' : '#059669';
                       
                       const cartItem = cart.find(item => item.productId === product.id);
                       const cartQuantity = cartItem ? cartItem.qty : 0;
@@ -464,9 +474,8 @@ function Sales() {
                               {isOutOfStock ? '❌' : isLowStock ? '⚠️' : '✅'}
                             </span>
                             <span className="stock-qty">
-                              {stock}
+                              {formatStock(product)}
                             </span>
-                            <span className="stock-label">unidades</span>
                             {minStock > 0 && (
                               <span className="min-stock">Mín: {minStock}</span>
                             )}
@@ -481,14 +490,36 @@ function Sales() {
                             )}
                           </div>
                           
-                          <button
-                            className={`button btn-primary add-to-cart-btn ${isOutOfStock ? 'disabled' : ''}`}
-                            onClick={() => addToCart(product)}
-                            disabled={isOutOfStock || loading}
-                            title={isOutOfStock ? "Produto sem estoque" : "Adicionar ao carrinho"}
-                          >
-                            {isOutOfStock ? "Sem Estoque" : "➕ Adicionar"}
-                          </button>
+                          <div className="product-actions">
+                            {product.saleType === 'weight' ? (
+                              <div className="weight-add">
+                                <input
+                                  className="input weight-input"
+                                  placeholder="g (ex:250) ou 1.5kg"
+                                  value={weightInputs[product.id] || ''}
+                                  onChange={e => setWeightInputs(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                  disabled={loading}
+                                />
+                                <button
+                                  className={`button btn-primary add-to-cart-btn ${isOutOfStock ? 'disabled' : ''}`}
+                                  onClick={() => addToCart(product)}
+                                  disabled={isOutOfStock || loading}
+                                  title={isOutOfStock ? "Produto sem estoque" : "Adicionar ao carrinho"}
+                                >
+                                  {isOutOfStock ? "Sem Estoque" : "➕ Adicionar"}
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                className={`button btn-primary add-to-cart-btn ${isOutOfStock ? 'disabled' : ''}`}
+                                onClick={() => addToCart(product)}
+                                disabled={isOutOfStock || loading}
+                                title={isOutOfStock ? "Produto sem estoque" : "Adicionar ao carrinho"}
+                              >
+                                {isOutOfStock ? "Sem Estoque" : "➕ Adicionar"}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -564,7 +595,10 @@ function Sales() {
                               </h4>
                               <div className="item-details">
                                 <span className="item-price">
-                                  R$ {item.unitPrice.toFixed(2)}/un
+                                  {item.saleType === 'weight' ?
+                                    `R$ ${item.unitPrice.toFixed(2)} (${item.weight} g)` :
+                                    `R$ ${item.unitPrice.toFixed(2)}/un`
+                                  }
                                 </span>
                                 <span className="item-stock">
                                   Estoque: {estoqueDisponivel}
@@ -576,7 +610,7 @@ function Sales() {
                             <div className="cart-item-controls">
                               <button
                                 className="quantity-btn decrease"
-                                onClick={() => changeQty(item.productId, item.qty - 1)}
+                                onClick={() => changeQty(item.productId, item.qty - 1, item.weight)}
                                 disabled={loading}
                               >
                                 −
@@ -588,7 +622,7 @@ function Sales() {
                               
                               <button
                                 className="quantity-btn increase"
-                                onClick={() => changeQty(item.productId, item.qty + 1)}
+                                onClick={() => changeQty(item.productId, item.qty + 1, item.weight)}
                                 disabled={estoqueDisponivel <= item.qty || loading}
                                 title={estoqueDisponivel <= item.qty ? "Sem estoque disponível" : "Aumentar quantidade"}
                               >
@@ -604,7 +638,7 @@ function Sales() {
                             
                             <button
                               className="remove-btn"
-                              onClick={() => removeItem(item.productId)}
+                              onClick={() => removeItem(item.productId, item.weight)}
                               title="Remover do carrinho"
                               disabled={loading}
                             >

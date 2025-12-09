@@ -70,12 +70,16 @@ export function addProduct(product) {
     const newProduct = {
       id: product.id || Date.now(),
       name: String(product.name).trim(),
-      price: Number(product.price) || 0,
+      // preço padrão (para unidade) ou preço por quilo será preenchido abaixo
+      price: Number(product.price) || (product.saleType === 'weight' ? Number(product.pricePerKilo) || 0 : 0),
       cost: Number(product.cost) || 0,
       stock: Math.max(0, Number(product.stock) || 0),
       min_stock: Math.max(0, Number(product.min_stock) || 0),
       // opcional: campo de imagem (base64 ou URL)
       image: product.image || undefined,
+      // Novo campos: saleType e pricePerKilo (para produtos vendidos por peso)
+      saleType: product.saleType || 'unit',
+      pricePerKilo: product.saleType === 'weight' ? Number(product.pricePerKilo) || 0 : undefined,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -118,10 +122,15 @@ export function updateProduct(id, updatedProduct) {
       ...updatedProduct,
       id: id, // Garantir que o ID não seja alterado
       name: String(updatedProduct.name).trim(),
-      price: Number(updatedProduct.price) || products[index].price,
+      // Para manter compatibilidade: se for produto por peso, salvamos pricePerKilo e ajustamos price para o valor equivalente por kg
+      price: updatedProduct.saleType === 'weight'
+        ? (Number(updatedProduct.pricePerKilo) || products[index].price)
+        : Number(updatedProduct.price) || products[index].price,
       cost: Number(updatedProduct.cost) || products[index].cost,
       stock: Math.max(0, Number(updatedProduct.stock) || products[index].stock),
       min_stock: Math.max(0, Number(updatedProduct.min_stock) || products[index].min_stock),
+      saleType: updatedProduct.saleType || products[index].saleType || 'unit',
+      pricePerKilo: updatedProduct.saleType === 'weight' ? Number(updatedProduct.pricePerKilo) || products[index].pricePerKilo : undefined,
       updated_at: new Date().toISOString()
     };
     
@@ -334,25 +343,41 @@ export function makeSale(saleData) {
       if (!item.productId && item.productId !== 0) {
         throw new Error(`Item ${index + 1}: ID do produto não especificado`);
       }
-      
+
       if (!item.qty || item.qty <= 0) {
         throw new Error(`Item ${index + 1}: Quantidade inválida`);
       }
-      
+
       const product = products.find(p => p.id === item.productId);
       if (!product) {
         throw new Error(`Item ${index + 1}: Produto não encontrado (ID: ${item.productId})`);
       }
-      
-      const currentStock = product.stock || 0;
-      if (currentStock < item.qty) {
-        throw new Error(`Item ${index + 1}: Estoque insuficiente para ${product.name}. Disponível: ${currentStock}, Solicitado: ${item.qty}`);
+
+      // Se o produto for vendido por peso, espera-se que o item informe `weight` em gramas.
+      if (product.saleType === 'weight') {
+        const weightPerPortion = Number(item.weight || 0);
+        if (!weightPerPortion || weightPerPortion <= 0) {
+          throw new Error(`Item ${index + 1}: Peso inválido para produto por peso`);
+        }
+
+        // Total de gramas necessários para essa linha (peso * quantidade)
+        const totalGramsNeeded = weightPerPortion * Number(item.qty);
+        const currentStockGrams = Number(product.stock || 0);
+        if (currentStockGrams < totalGramsNeeded) {
+          throw new Error(`Item ${index + 1}: Estoque insuficiente para ${product.name}. Disponível: ${currentStockGrams}g, Solicitado: ${totalGramsNeeded}g`);
+        }
+      } else {
+        const currentStock = product.stock || 0;
+        if (currentStock < item.qty) {
+          throw new Error(`Item ${index + 1}: Estoque insuficiente para ${product.name}. Disponível: ${currentStock}, Solicitado: ${item.qty}`);
+        }
       }
-      
+
       return {
         productId: item.productId,
         name: item.name || product.name,
         qty: Number(item.qty),
+        weight: item.weight ? Number(item.weight) : undefined,
         unitPrice: Number(item.unitPrice) || Number(product.price),
         subtotal: Number(item.subtotal) || (Number(item.qty) * (Number(item.unitPrice) || Number(product.price)))
       };
@@ -380,15 +405,29 @@ export function makeSale(saleData) {
     validatedItems.forEach(item => {
       const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
       if (productIndex !== -1) {
-        const newStock = updatedProducts[productIndex].stock - item.qty;
-        updatedProducts[productIndex] = {
-          ...updatedProducts[productIndex],
-          stock: Math.max(0, newStock),
-          updated_at: new Date().toISOString(),
-          last_sale: new Date().toISOString()
-        };
-        
-        console.log(`📉 Estoque atualizado: ${updatedProducts[productIndex].name} - Novo estoque: ${newStock}`);
+        const product = updatedProducts[productIndex];
+
+        // Para produtos por peso, `stock` é armazenado em gramas (g)
+        if (product.saleType === 'weight') {
+          const gramsToSubtract = (Number(item.weight) || 0) * Number(item.qty);
+          const newStock = (Number(product.stock) || 0) - gramsToSubtract;
+          updatedProducts[productIndex] = {
+            ...product,
+            stock: Math.max(0, newStock),
+            updated_at: new Date().toISOString(),
+            last_sale: new Date().toISOString()
+          };
+          console.log(`📉 Estoque atualizado (g): ${updatedProducts[productIndex].name} - Novo estoque: ${updatedProducts[productIndex].stock}g`);
+        } else {
+          const newStock = (Number(product.stock) || 0) - item.qty;
+          updatedProducts[productIndex] = {
+            ...product,
+            stock: Math.max(0, newStock),
+            updated_at: new Date().toISOString(),
+            last_sale: new Date().toISOString()
+          };
+          console.log(`📉 Estoque atualizado: ${updatedProducts[productIndex].name} - Novo estoque: ${newStock}`);
+        }
       }
     });
     

@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useRef } from "react";
-import { getProducts, addProduct, updateProduct, deleteProduct, initDefaultProducts, exportData } from "../services/storage";
+import { addProduct, updateProduct, deleteProduct, initDefaultProducts, exportData } from "../services/storage";
 import "./Products.css";
 
 function emptyForm() { 
@@ -51,6 +51,58 @@ export default function Products() {
       console.error('Erro ao carregar produtos do localStorage:', error);
       return [];
     }
+  };
+
+  // Formata estoque: para produtos por peso, exibe em kg/g
+  const formatStock = (product) => {
+    if (!product) return '';
+    const stock = Number(product.stock || 0);
+    if (product.saleType === 'weight') {
+      if (stock >= 1000) {
+        return `${(stock / 1000).toFixed(3).replace(/\.?0+$/, '')} kg (${stock} g)`;
+      }
+      return `${stock} g`;
+    }
+    return `${stock} unidades`;
+  };
+
+  // Parseia entrada de quantidade para produtos por peso.
+  // Aceita: "250" (gramas), "1500" (gramas), "1.5kg", "1,5kg", "250g"
+  const parseQuantityInput = (input, isWeight) => {
+    if (input === null || input === undefined) return null;
+    const s = String(input).trim().toLowerCase();
+    if (!s) return null;
+
+    if (!isWeight) {
+      const n = parseInt(s.replace(/[^0-9-]/g, ''), 10);
+      return Number.isNaN(n) ? null : n;
+    }
+
+    // Weight parsing
+    let normalized = s.replace(',', '.');
+    // If contains 'kg'
+    if (normalized.endsWith('kg')) {
+      const num = parseFloat(normalized.replace('kg', '').trim());
+      return Number.isNaN(num) ? null : Math.round(num * 1000);
+    }
+    // If contains 'g'
+    if (normalized.endsWith('g')) {
+      const num = parseFloat(normalized.replace('g', '').trim());
+      return Number.isNaN(num) ? null : Math.round(num);
+    }
+
+    // If contains a dot (e.g., 1.5) assume kg
+    if (normalized.includes('.')) {
+      const num = parseFloat(normalized);
+      return Number.isNaN(num) ? null : Math.round(num * 1000);
+    }
+
+    // Otherwise treat as grams if >=100 or as grams by default
+    const asNumber = parseFloat(normalized);
+    if (Number.isNaN(asNumber)) return null;
+    if (asNumber >= 1000) return Math.round(asNumber);
+    // If small integer (<1000) assume grams
+    return Math.round(asNumber);
   };
 
   const saveProductsDirectly = (products) => {
@@ -286,20 +338,26 @@ export default function Products() {
   const handleRestock = (productId, productName) => {
     const currentProduct = list.find(p => p.id === productId);
     if (!currentProduct) return;
-    
-    const quantity = prompt(
-      `📦 Repor estoque de "${productName}"\n\n` +
-      `Estoque atual: ${currentProduct.stock} unidades\n` +
-      `Digite quantas unidades deseja ADICIONAR:`,
-      "10"
-    );
-    
-    if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
+    let promptMessage = `📦 Repor estoque de "${productName}"\n\n`;
+    if (currentProduct.saleType === 'weight') {
+      promptMessage += `Estoque atual: ${formatStock(currentProduct)}\n`;
+      promptMessage += `Digite a quantidade a ADICIONAR (ex: 250, 1500, 1.5kg, 250g):`;
+    } else {
+      promptMessage += `Estoque atual: ${currentProduct.stock} unidades\n`;
+      promptMessage += `Digite quantas unidades deseja ADICIONAR:`;
+    }
+
+    const quantity = prompt(promptMessage, currentProduct.saleType === 'weight' ? '1000' : '10');
+
+    if (quantity === null) return;
+
+    const parsed = parseQuantityInput(quantity, currentProduct.saleType === 'weight');
+    if (parsed === null || parsed <= 0) {
+      showNotification('Entrada inválida. Nenhuma alteração aplicada.', 'warning');
       return;
     }
-    
-    const addQty = parseInt(quantity);
-    applyStockUpdate(productId, addQty);
+
+    applyStockUpdate(productId, parsed);
   };
 
   const openStockModal = (product) => {
@@ -308,6 +366,8 @@ export default function Products() {
   };
 
   const quickAddStock = (productId, quantity) => {
+    // For quick-add, `quantity` is interpreted as units for unit products
+    // and as grams for weight products when called from the modal buttons.
     applyStockUpdate(productId, quantity);
   };
 
@@ -321,8 +381,9 @@ export default function Products() {
       const updatedProducts = products.map(p => {
         if (p.id === productId) {
           const currentStock = Number(p.stock) || 0;
-          const newStock = Math.max(0, currentStock + quantity);
-          
+          // Se for produto por peso, quantity é em gramas
+          const newStock = Math.max(0, currentStock + Number(quantity));
+
           return {
             ...p,
             stock: newStock,
@@ -525,10 +586,14 @@ export default function Products() {
 
   function handleChange(e) {
     const { name, value } = e.target;
-    setForm(f => ({
-      ...f, 
-      [name]: value
-    }));
+    setForm(f => {
+      const next = { ...f, [name]: value };
+      // Ao mudar para venda por peso, limpar o campo `price` para evitar duplicidade
+      if (name === 'saleType' && value === 'weight') {
+        next.price = '';
+      }
+      return next;
+    });
   }
 
   function validateForm() {
@@ -536,10 +601,17 @@ export default function Products() {
       setError("Nome do produto é obrigatório");
       return false;
     }
-    
-    if (!form.price || Number(form.price) <= 0) {
-      setError("Preço de venda deve ser maior que zero");
-      return false;
+    // Validar preço dependendo do tipo de venda
+    if (form.saleType === 'weight') {
+      if (!form.pricePerKilo || Number(form.pricePerKilo) <= 0) {
+        setError('Preço por quilo deve ser maior que zero');
+        return false;
+      }
+    } else {
+      if (!form.price || Number(form.price) <= 0) {
+        setError('Preço de venda deve ser maior que zero');
+        return false;
+      }
     }
     
     const stock = Number(form.stock) || 0;
@@ -571,7 +643,9 @@ export default function Products() {
         id: Date.now(),
         name: form.name.trim(),
         sku: form.sku?.trim() || `PROD${Date.now()}`,
-        price: Number(form.price) || 0,
+        // Definir preço principal: se for por peso, salva preço por kilo em pricePerKilo e coloca price com o valor por kg
+        price: form.saleType === 'weight' ? (Number(form.pricePerKilo) || 0) : (Number(form.price) || 0),
+        pricePerKilo: form.saleType === 'weight' ? Number(form.pricePerKilo) || 0 : undefined,
         cost: Number(form.cost) || 0,
         stock: Math.max(0, Number(form.stock) || 0),
         min_stock: Math.max(0, Number(form.min_stock) || 0),
@@ -639,7 +713,7 @@ export default function Products() {
         name: form.name.trim(),
         sku: form.sku?.trim() || "",
         image: form.image || undefined,
-        price: Number(form.price) || 0,
+        price: form.saleType === 'weight' ? (Number(form.pricePerKilo) || 0) : (Number(form.price) || 0),
         cost: Number(form.cost) || 0,
         stock: Math.max(0, Number(form.stock) || 0),
         min_stock: Math.max(0, Number(form.min_stock) || 0),
@@ -1006,21 +1080,23 @@ export default function Products() {
           <div className="form-group">
             <label>
               Preço de Venda (R$) *
-              <span className="helper">Preço para o cliente</span>
-              <span className="required"> *</span>
+            <span className="helper">Preço para o cliente</span>
+            <span className="required"> *</span>
             </label>
-            <input 
-              className="input" 
-              type="number" 
-              name="price" 
-              min="0.01" 
-              step="0.01"
-              placeholder="0,00"
-              value={form.price} 
-              onChange={handleChange} 
-              disabled={loading}
-              required
-            />
+            {form.saleType !== 'weight' && (
+              <input 
+                className="input" 
+                type="number" 
+                name="price" 
+                min="0.01" 
+                step="0.01"
+                placeholder="0,00"
+                value={form.price} 
+                onChange={handleChange} 
+                disabled={loading}
+                required
+              />
+            )}
           </div>
 
           <div className="form-group">
@@ -1084,6 +1160,9 @@ export default function Products() {
                 onChange={handleChange} 
                 disabled={loading}
               />
+              <small className="helper-text">
+                {form.saleType === 'weight' ? 'Informe o estoque em gramas (ex: 1500 para 1.5 kg)' : 'Informe a quantidade em unidades'}
+              </small>
               <div className="quick-stock-buttons">
                 <button 
                   type="button" 
@@ -1555,45 +1634,90 @@ export default function Products() {
               </button>
             </div>
             <div className="modal-body">
-              <p>Estoque atual: <strong>{stockModalProduct.stock}</strong> unidades</p>
+              <p>Estoque atual: <strong>{formatStock(stockModalProduct)}</strong></p>
               
               <div className="modal-stock-options">
                 <div className="modal-stock-grid">
-                  <button 
-                    className="modal-stock-option"
-                    onClick={() => {
-                      quickAddStock(stockModalProduct.id, 1);
-                      setShowStockModal(false);
-                    }}
-                  >
-                    <span className="option-icon">➕</span>
-                    <span className="option-title">+1 Unidade</span>
-                    <span className="option-desc">Estoque: {stockModalProduct.stock + 1}</span>
-                  </button>
-                  
-                  <button 
-                    className="modal-stock-option"
-                    onClick={() => {
-                      quickAddStock(stockModalProduct.id, 5);
-                      setShowStockModal(false);
-                    }}
-                  >
-                    <span className="option-icon">📦</span>
-                    <span className="option-title">+5 Unidades</span>
-                    <span className="option-desc">Estoque: {stockModalProduct.stock + 5}</span>
-                  </button>
-                  
-                  <button 
-                    className="modal-stock-option"
-                    onClick={() => {
-                      quickAddStock(stockModalProduct.id, 10);
-                      setShowStockModal(false);
-                    }}
-                  >
-                    <span className="option-icon">📊</span>
-                    <span className="option-title">+10 Unidades</span>
-                    <span className="option-desc">Estoque: {stockModalProduct.stock + 10}</span>
-                  </button>
+                  {stockModalProduct.saleType === 'weight' ? (
+                    <>
+                      <button 
+                        className="modal-stock-option"
+                        onClick={() => {
+                          // +100g
+                          quickAddStock(stockModalProduct.id, 100);
+                          setShowStockModal(false);
+                        }}
+                      >
+                        <span className="option-icon">➕</span>
+                        <span className="option-title">+100 g</span>
+                        <span className="option-desc">Estoque: {formatStock({ ...stockModalProduct, stock: Number(stockModalProduct.stock || 0) + 100 })}</span>
+                      </button>
+
+                      <button 
+                        className="modal-stock-option"
+                        onClick={() => {
+                          // +500g
+                          quickAddStock(stockModalProduct.id, 500);
+                          setShowStockModal(false);
+                        }}
+                      >
+                        <span className="option-icon">📦</span>
+                        <span className="option-title">+500 g</span>
+                        <span className="option-desc">Estoque: {formatStock({ ...stockModalProduct, stock: Number(stockModalProduct.stock || 0) + 500 })}</span>
+                      </button>
+
+                      <button 
+                        className="modal-stock-option"
+                        onClick={() => {
+                          // +1000g (1kg)
+                          quickAddStock(stockModalProduct.id, 1000);
+                          setShowStockModal(false);
+                        }}
+                      >
+                        <span className="option-icon">📊</span>
+                        <span className="option-title">+1 kg</span>
+                        <span className="option-desc">Estoque: {formatStock({ ...stockModalProduct, stock: Number(stockModalProduct.stock || 0) + 1000 })}</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        className="modal-stock-option"
+                        onClick={() => {
+                          quickAddStock(stockModalProduct.id, 1);
+                          setShowStockModal(false);
+                        }}
+                      >
+                        <span className="option-icon">➕</span>
+                        <span className="option-title">+1 Unidade</span>
+                        <span className="option-desc">Estoque: {stockModalProduct.stock + 1}</span>
+                      </button>
+                      
+                      <button 
+                        className="modal-stock-option"
+                        onClick={() => {
+                          quickAddStock(stockModalProduct.id, 5);
+                          setShowStockModal(false);
+                        }}
+                      >
+                        <span className="option-icon">📦</span>
+                        <span className="option-title">+5 Unidades</span>
+                        <span className="option-desc">Estoque: {stockModalProduct.stock + 5}</span>
+                      </button>
+                      
+                      <button 
+                        className="modal-stock-option"
+                        onClick={() => {
+                          quickAddStock(stockModalProduct.id, 10);
+                          setShowStockModal(false);
+                        }}
+                      >
+                        <span className="option-icon">📊</span>
+                        <span className="option-title">+10 Unidades</span>
+                        <span className="option-desc">Estoque: {stockModalProduct.stock + 10}</span>
+                      </button>
+                    </>
+                  )}
                   
                   <button 
                     className="modal-stock-option"
@@ -1610,21 +1734,24 @@ export default function Products() {
                 
                 <div className="modal-custom">
                   <input
-                    type="number"
+                    type="text"
                     className="input"
-                    placeholder="Digite a quantidade"
-                    min="1"
+                    placeholder={stockModalProduct.saleType === 'weight' ? "Ex: 250 (g) ou 1.5kg" : "Digite a quantidade"}
                     id="customQuantity"
                   />
                   <button 
                     className="button btn-primary"
                     onClick={() => {
                       const input = document.getElementById('customQuantity');
-                      const quantity = parseInt(input.value) || 0;
-                      if (quantity > 0) {
-                        quickAddStock(stockModalProduct.id, quantity);
-                        setShowStockModal(false);
+                      const raw = input.value;
+                      if (!raw) return;
+                      const parsed = parseQuantityInput(raw, stockModalProduct.saleType === 'weight');
+                      if (parsed === null || parsed <= 0) {
+                        showNotification('Entrada inválida.', 'warning');
+                        return;
                       }
+                      quickAddStock(stockModalProduct.id, parsed);
+                      setShowStockModal(false);
                     }}
                   >
                     Aplicar Quantidade

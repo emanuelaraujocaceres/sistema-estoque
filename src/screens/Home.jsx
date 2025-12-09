@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "./Home.css";
 
 export default function Home() {
-  const { user, supabase, updateUserData } = useAuth();
+  const { user, supabase, refreshUser } = useAuth();
   const navigate = useNavigate();
   
   const [editingName, setEditingName] = useState(false);
@@ -155,9 +155,8 @@ export default function Home() {
         console.log("Avatar atualizado com sucesso no Supabase:", data.user);
         
         // Atualiza o contexto local
-        if (updateUserData) {
-          updateUserData(data.user);
-        }
+        // Atualiza o usuário no contexto sem recarregar a página
+        if (refreshUser) await refreshUser();
         
         alert('✅ Foto de perfil atualizada com sucesso!');
       } else {
@@ -419,7 +418,7 @@ export default function Home() {
       if (!sessionData.session) throw new Error("Sessão expirada");
       
       // Atualiza no Supabase
-      const { data, error } = await supabase.auth.updateUser({ 
+      const { error } = await supabase.auth.updateUser({ 
         data: { 
           ...(user?.user_metadata || {}),
           name: name.trim() 
@@ -432,14 +431,10 @@ export default function Home() {
       setEditingName(false);
       
       // Atualiza o contexto de autenticação localmente
-      if (updateUserData && data?.user) {
-        updateUserData(data.user);
-      }
+      if (refreshUser) await refreshUser();
       
-      // Recarrega para garantir a atualização
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Atualiza a interface sem forçar reload
+      // refreshUser já foi chamado acima
       
     } catch (err) {
       console.error("Erro ao atualizar nome:", err);
@@ -469,6 +464,8 @@ export default function Home() {
       
       alert("✅ E-mail atualizado!\n\nVerifique sua caixa de entrada (e spam) para confirmar o novo e-mail.\n\nApós a confirmação, você precisará fazer login novamente.");
       setEditingEmail(false);
+      // Atualiza o contexto do usuário localmente (se disponível)
+      if (refreshUser) await refreshUser();
     } catch (err) {
       console.error("Erro ao atualizar e-mail:", err);
       alert(`❌ Erro ao atualizar e-mail: ${err.message || "Erro desconhecido"}\n\nVerifique se o e-mail já não está em uso.`);

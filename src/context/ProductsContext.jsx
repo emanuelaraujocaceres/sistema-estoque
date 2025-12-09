@@ -29,8 +29,8 @@ export const ProductsProvider = ({ children }) => {
           }));
         }
       }
-    } catch (e) {
-      console.error('Erro ao carregar produtos:', e);
+    } catch (err) {
+      console.error('Erro ao carregar produtos:', err);
     }
     
     // Retornar estrutura padrão compatível com storage.js
@@ -53,10 +53,40 @@ export const ProductsProvider = ({ children }) => {
       }));
       
       localStorage.setItem(STORAGE_KEY, JSON.stringify(productsToSave));
-    } catch (e) {
-      console.error('Erro ao salvar produtos:', e);
+    } catch (err) {
+      console.error('Erro ao salvar produtos:', err);
     }
   }, [products]);
+
+  // Sincronizar automaticamente quando houver mudanças externas
+  useEffect(() => {
+    const handleProductsUpdated = () => {
+      try {
+        const storageProducts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        if (Array.isArray(storageProducts)) setProducts(storageProducts);
+      } catch (err) {
+        console.error('Erro ao sincronizar produtos via event:', err);
+      }
+    };
+
+    const handleStorage = (e) => {
+      if (e.key === STORAGE_KEY || e.key === 'last_stock_update' || e.key === null) {
+        handleProductsUpdated();
+      }
+    };
+
+    window.addEventListener('products-updated', handleProductsUpdated);
+    window.addEventListener('stock-updated', handleProductsUpdated);
+    window.addEventListener('force-sync', handleProductsUpdated);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('products-updated', handleProductsUpdated);
+      window.removeEventListener('stock-updated', handleProductsUpdated);
+      window.removeEventListener('force-sync', handleProductsUpdated);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   // Atualizar estoque de um produto
   const updateStock = (productId, quantityChange) => {

@@ -21,6 +21,17 @@ export function AuthProvider({ children }) {
     return () => listener?.subscription?.unsubscribe?.();
   }, []);
 
+  const refreshUser = async () => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) setUser(data.user);
+      return data?.user || null;
+    } catch (err) {
+      console.error('Erro ao atualizar usuário:', err);
+      return null;
+    }
+  };
+
   const signIn = async (email, password) => {
     setLoading(true);
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
@@ -36,7 +47,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, supabase }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, supabase, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

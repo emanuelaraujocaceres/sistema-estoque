@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from "react";
-import { getSales, getProducts, exportData } from "../services/storage";
+import { getSales, getProducts } from "../services/storage";
 import html2pdf from "html2pdf.js";
 import "./Reports.css";
 
