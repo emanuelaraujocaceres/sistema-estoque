@@ -1,4 +1,13 @@
-﻿import { useState, useRef, useEffect } from "react";
+﻿[file name]: image.png
+[file content begin]
+Home.jsx aplicativoksrckscreens
+
+Invalid character. ts(1127) [Ln 351, Col 25]
+Unexpected keyword or identifier. ts(1434) [Ln 351, Col 27]
+Declaration or statement expected. ts(1128) [Ln 992, Col 1]
+[file content end]
+
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
@@ -348,43 +357,9 @@ export default function Home() {
     // Atualizar o avatar
     await updateAvatar(photoData);
     
-                        ⟳ Reiniciar Câmera
+    // Removi a linha solta que estava causando o erro
     closeCameraModal();
   };
-                    {cameraStream && (
-                      <button
-                        className="button btn-secondary"
-                        onClick={() => {
-                          if (cameraStream) {
-                            const tracks = cameraStream.getVideoTracks();
-                            if (tracks[0]) {
-                              const settings = tracks[0].getSettings();
-                              const newFacingMode = settings.facingMode === 'user' ? 'environment' : 'user';
-
-                              stopCamera();
-                              setTimeout(() => {
-                                navigator.mediaDevices.getUserMedia({
-                                  video: { facingMode: newFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-                                  audio: false
-                                })
-                                .then(newStream => {
-                                  setCameraStream(newStream);
-                                  if (videoRef.current) {
-                                    videoRef.current.srcObject = newStream;
-                                  }
-                                })
-                                .catch(err => {
-                                  console.error('Erro ao trocar câmera:', err);
-                                  setCameraError('Não foi possível trocar a câmera');
-                                });
-                              }, 100);
-                            }
-                          }
-                        }}
-                      >
-                        ⟳ Trocar Câmera
-                      </button>
-                    )}
 
   const openCameraModal = () => {
     const cameraCheck = checkCameraSupport();
@@ -463,9 +438,6 @@ export default function Home() {
       
       // Atualiza o contexto de autenticação localmente sem bloquear a UI
       if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuário (nome):', err));
-      
-      // Atualiza a interface sem forçar reload
-      // refreshUser já foi chamado acima
       
     } catch (err) {
       console.error("Erro ao atualizar nome:", err);
