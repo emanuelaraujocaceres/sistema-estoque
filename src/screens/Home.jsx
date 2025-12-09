@@ -1,13 +1,4 @@
-﻿[file name]: image.png
-[file content begin]
-Home.jsx aplicativoksrckscreens
-
-Invalid character. ts(1127) [Ln 351, Col 25]
-Unexpected keyword or identifier. ts(1434) [Ln 351, Col 27]
-Declaration or statement expected. ts(1128) [Ln 992, Col 1]
-[file content end]
-
-import { useState, useRef, useEffect } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
@@ -357,7 +348,6 @@ export default function Home() {
     // Atualizar o avatar
     await updateAvatar(photoData);
     
-    // Removi a linha solta que estava causando o erro
     closeCameraModal();
   };
 
@@ -438,6 +428,9 @@ export default function Home() {
       
       // Atualiza o contexto de autenticação localmente sem bloquear a UI
       if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuário (nome):', err));
+      
+      // Atualiza a interface sem forçar reload
+      // refreshUser já foi chamado acima
       
     } catch (err) {
       console.error("Erro ao atualizar nome:", err);
