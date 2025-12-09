@@ -348,7 +348,7 @@ export default function Home() {
     // Atualizar o avatar
     await updateAvatar(photoData);
     
-                        🔄 Reiniciar Câmera
+                        ⟳ Reiniciar Câmera
     closeCameraModal();
   };
                     {cameraStream && (
@@ -382,7 +382,7 @@ export default function Home() {
                           }
                         }}
                       >
-                        🔄 Trocar Câmera
+                        ⟳ Trocar Câmera
                       </button>
                     )}
 
@@ -606,7 +606,7 @@ export default function Home() {
           <div className="profile-actions">
             <div className="avatar-upload-options">
               <label className="button btn-action file-label">
-                {uploadingAvatar ? '🔄 Processando...' : '📁 Escolher da Galeria'}
+                {uploadingAvatar ? '⟳ Processando...' : '📁 Escolher da Galeria'}
                 <input
                   type="file"
                   accept="image/*"
@@ -620,7 +620,7 @@ export default function Home() {
                 onClick={openCameraModal}
                 disabled={uploadingAvatar}
               >
-                {uploadingAvatar ? '🔄 Processando...' : '📷 Tirar Foto'}
+                {uploadingAvatar ? '⟳ Processando...' : '📷 Tirar Foto'}
               </button>
             </div>
             
@@ -692,7 +692,7 @@ export default function Home() {
                     type="submit"
                     disabled={loadingName || !name.trim()}
                   >
-                    {loadingName ? "🔄 Salvando..." : "💾 Salvar Alterações"}
+                    {loadingName ? "⟳ Salvando..." : "💾 Salvar Alterações"}
                   </button>
                   <button 
                     className="button btn-secondary" 
@@ -757,7 +757,7 @@ export default function Home() {
                     type="submit"
                     disabled={loadingEmail || !newEmail.trim() || newEmail === user?.email}
                   >
-                    {loadingEmail ? "🔄 Enviando..." : "📤 Enviar Confirmação"}
+                    {loadingEmail ? "⟳ Enviando..." : "📤 Enviar Confirmação"}
                   </button>
                   <button 
                     className="button btn-secondary" 
@@ -833,7 +833,7 @@ export default function Home() {
                     type="submit"
                     disabled={loadingPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
                   >
-                    {loadingPassword ? "🔄 Alterando..." : "🔑 Alterar Senha"}
+                    {loadingPassword ? "⟳ Alterando..." : "🔑 Alterar Senha"}
                   </button>
                   <button 
                     className="button btn-secondary" 
@@ -877,7 +877,7 @@ export default function Home() {
                       onClick={startCamera}
                       disabled={cameraInitializing}
                     >
-                      🔄 Tentar novamente
+                      ⟳ Tentar novamente
                     </button>
                     <button 
                       className="button btn-primary"
@@ -933,7 +933,7 @@ export default function Home() {
                           }}
                           disabled={cameraInitializing}
                         >
-                          🔄 Reiniciar Câmera
+                          ⟳ Reiniciar Câmera
                         </button>
 
                         <button 
@@ -967,7 +967,7 @@ export default function Home() {
                           }}
                           disabled={cameraInitializing}
                         >
-                          🔄 Trocar Câmera
+                          ⟳ Trocar Câmera
                         </button>
                       </>
                     )}
@@ -977,8 +977,8 @@ export default function Home() {
                       onClick={takePhoto}
                       disabled={!cameraStream || cameraInitializing || uploadingAvatar}
                     >
-                      {cameraInitializing ? '🔄 Inicializando...' : 
-                       uploadingAvatar ? '🔄 Salvando...' : '📸 Tirar Foto'}
+                      {cameraInitializing ? '⟳ Inicializando...' : 
+                       uploadingAvatar ? '⟳ Salvando...' : '📸 Tirar Foto'}
                     </button>
                   </div>
                 </>
