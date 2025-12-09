@@ -39,6 +39,9 @@ export default function Products() {
   const [cameraStream, setCameraStream] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [cameraInitializing, setCameraInitializing] = useState(false);
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [convertTotal, setConvertTotal] = useState('');
+  const [convertQty, setConvertQty] = useState('');
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -1005,21 +1008,37 @@ export default function Products() {
               {form.saleType === 'weight' ? 'Custo (R$/kg)' : 'Custo (R$)'}
               <span className="helper">Custo de aquisição</span>
             </label>
-            <input 
-              className="input" 
-              type="number" 
-              name="cost" 
-              min="0" 
-              step="0.01"
-              placeholder="0,00"
-              value={form.cost} 
-              onChange={handleChange} 
-              disabled={loading}
-            />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input 
+                className="input" 
+                type="number" 
+                name="cost" 
+                min="0" 
+                step="0.0001"
+                placeholder="0,00"
+                value={form.cost} 
+                onChange={handleChange} 
+                disabled={loading}
+                style={{ flex: 1 }}
+              />
+              {form.saleType !== 'weight' && (
+                <button
+                  type="button"
+                  className="button btn-secondary btn-sm"
+                  onClick={() => {
+                    setConvertTotal('');
+                    setConvertQty('');
+                    setShowConvertModal(true);
+                  }}
+                >
+                  Converter Custo Total
+                </button>
+              )}
+            </div>
             <small className="helper-text">
               {form.saleType === 'weight'
                 ? 'Informe o custo por quilo (R$/kg). Se você pagou um valor total, divida pelo total de kg (ex: 10kg por R$30 → informe R$3.00).'
-                : 'Custo de aquisição por unidade.'}
+                : 'Informe o custo por unidade. Se você pagou um valor total, use "Converter Custo Total" para calcular o custo por unidade.'}
             </small>
           </div>
 
@@ -1578,6 +1597,47 @@ export default function Products() {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showConvertModal && (
+        <div className="modal-overlay" onClick={() => setShowConvertModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <div className="modal-header">
+              <h3>Converter Custo Total → por Unidade</h3>
+              <button className="modal-close" onClick={() => setShowConvertModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Valor total pago (R$)</label>
+                <input className="input" value={convertTotal} onChange={e => setConvertTotal(e.target.value)} placeholder="Ex: 10" />
+              </div>
+              <div className="form-group">
+                <label>Quantidade total adquirida</label>
+                <input className="input" value={convertQty} onChange={e => setConvertQty(e.target.value)} placeholder="Ex: 10000" />
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="button btn-secondary" onClick={() => setShowConvertModal(false)}>Cancelar</button>
+              <button className="button btn-primary" onClick={() => {
+                try {
+                  const totalNum = Number(String(convertTotal).replace(',', '.'));
+                  const qtyNum = Number(String(convertQty).replace(',', '.'));
+                  if (!totalNum || totalNum <= 0 || !qtyNum || qtyNum <= 0) {
+                    alert('Valores inválidos');
+                    return;
+                  }
+                  const unitCost = totalNum / qtyNum;
+                  setForm(f => ({ ...f, cost: unitCost.toFixed(4) }));
+                  showNotification('✅ Custo por unidade calculado e preenchido', 'success');
+                  setShowConvertModal(false);
+                } catch (err) {
+                  console.error(err);
+                  showNotification('Erro ao converter custo total', 'error');
+                }
+              }}>Converter</button>
             </div>
           </div>
         </div>
