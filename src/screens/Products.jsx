@@ -1359,11 +1359,19 @@ export default function Products() {
                       
                       <td className="price-cell">
                         <div className="price-display highlight">
-                          R$ {Number(p.price || 0).toFixed(2)}
+                          {p.saleType === 'weight' ? (
+                            <>R$ {Number(p.pricePerKilo || p.price || 0).toFixed(2)} /kg</>
+                          ) : (
+                            <>R$ {Number(p.price || 0).toFixed(2)}</>
+                          )}
                         </div>
                         {p.cost > 0 && (
                           <div className="margin-info">
-                            Margem: {((p.price - p.cost) / p.cost * 100).toFixed(1)}%
+                            {p.saleType === 'weight' ? (
+                              `Margem: ${(((Number(p.pricePerKilo || p.price || 0) - Number(p.cost || 0)) / Number(p.cost || 1)) * 100).toFixed(1)}%`
+                            ) : (
+                              `Margem: ${(((Number(p.price || 0) - Number(p.cost || 0)) / Number(p.cost || 1)) * 100).toFixed(1)}%`
+                            )}
                           </div>
                         )}
                       </td>
@@ -1371,16 +1379,20 @@ export default function Products() {
                       <td className="stock-cell">
                         <div className="stock-display">
                           <span className={`stock-badge ${isOutOfStock ? 'stock-out' : isLowStock ? 'stock-low' : 'stock-ok'}`}>
-                            {p.stock || 0}
+                            {formatStock(p)}
                           </span>
                           {p.min_stock > 0 && (
                             <div className="min-stock">
-                              Mín: {p.min_stock}
+                              Mín: {p.saleType === 'weight' ? formatStock({ ...p, stock: p.min_stock }) : p.min_stock}
                             </div>
                           )}
                         </div>
                         <div className="stock-value">
-                          Valor: R$ {(p.stock * (p.cost || 0)).toFixed(2)}
+                          {p.saleType === 'weight' ? (
+                            <>Valor: R$ {((Number(p.stock || 0) / 1000) * (Number(p.cost || 0))).toFixed(2)}</>
+                          ) : (
+                            <>Valor: R$ {(Number(p.stock || 0) * (Number(p.cost || 0))).toFixed(2)}</>
+                          )}
                         </div>
                         
                         {bulkStockMode ? (
