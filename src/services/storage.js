@@ -62,8 +62,15 @@ export function addProduct(product) {
       throw new Error('Nome do produto é obrigatório');
     }
     
-    if (!product.price || Number(product.price) <= 0) {
-      throw new Error('Preço deve ser maior que zero');
+    // Para produtos por peso, permitimos informar apenas pricePerKilo
+    if (product.saleType === 'weight') {
+      if (!product.pricePerKilo || Number(product.pricePerKilo) <= 0) {
+        throw new Error('Preço por quilo deve ser maior que zero');
+      }
+    } else {
+      if (!product.price || Number(product.price) <= 0) {
+        throw new Error('Preço deve ser maior que zero');
+      }
     }
     
     const products = getProducts();

@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, useRef } from "react";
-import { addProduct, updateProduct, deleteProduct, initDefaultProducts, exportData } from "../services/storage";
+import { addProduct, updateProduct, deleteProduct, initDefaultProducts, exportData, updateStockDirect } from "../services/storage";
+import { useProducts } from "../context/ProductsContext";
 import "./Products.css";
 
 function emptyForm() { 
@@ -20,6 +21,7 @@ function emptyForm() {
 
 export default function Products() {
   const [list, setList] = useState([]);
+  const { products: ctxProducts, syncWithStorage } = useProducts();
   const [form, setForm] = useState(emptyForm());
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,18 +42,7 @@ export default function Products() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  // Funções auxiliares para sincronização direta com localStorage
-  const getProductsDirectly = () => {
-    try {
-      const data = localStorage.getItem('products');
-      if (!data) return [];
-      const parsed = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-      console.error('Erro ao carregar produtos do localStorage:', error);
-      return [];
-    }
-  };
+  // NOTE: usamos `ProductsContext` (`ctxProducts`) como fonte de verdade.
 
   // Formata estoque: para produtos por peso, exibe em kg/g
   const formatStock = (product) => {
@@ -105,44 +96,30 @@ export default function Products() {
     return Math.round(asNumber);
   };
 
-  const saveProductsDirectly = (products) => {
-    try {
-      localStorage.setItem('products', JSON.stringify(products));
-      return true;
-    } catch (error) {
-      console.error('Erro ao salvar produtos no localStorage:', error);
-      return false;
-    }
-  };
+  
 
   useEffect(() => {
     try {
       initDefaultProducts();
-      
-      // Carrega produtos diretamente do localStorage
-      const products = getProductsDirectly();
-      
-      console.log('Produtos carregados (diretamente):', products);
-      console.log('Dados brutos do localStorage:', localStorage.getItem('products'));
-      
-      if (!Array.isArray(products)) {
-        throw new Error("Dados de produtos inválidos");
-      }
-      setList(products);
-      
-      const initialUpdates = {};
-      products.forEach(p => {
-        if (p && p.id) {
-          initialUpdates[p.id] = 0;
-        }
-      });
-      setBulkStockUpdates(initialUpdates);
+      // Garantir que o contexto sincronize qualquer valor default criado
+      syncWithStorage();
     } catch (error) {
       console.error("Erro ao inicializar produtos:", error);
       setError("Erro ao carregar produtos. Verifique o console.");
       setList([]);
     }
   }, []);
+
+  // Sempre que o contexto mudar, atualiza a lista local e o estado de bulkStockUpdates
+  useEffect(() => {
+    const products = Array.isArray(ctxProducts) ? ctxProducts : [];
+    setList(products);
+    const initialUpdates = {};
+    products.forEach(p => {
+      if (p && p.id) initialUpdates[p.id] = 0;
+    });
+    setBulkStockUpdates(initialUpdates);
+  }, [ctxProducts]);
 
   const checkCameraSupport = () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -372,46 +349,33 @@ export default function Products() {
   };
 
   // FUNÇÃO CORRIGIDA: applyStockUpdate
-  const applyStockUpdate = (productId, quantity) => {
+  const applyStockUpdate = async (productId, quantity) => {
     try {
-      // 1. Carrega produtos diretamente do localStorage
-      const products = getProductsDirectly();
-      
-      // 2. Atualiza o produto específico
-      const updatedProducts = products.map(p => {
-        if (p.id === productId) {
-          const currentStock = Number(p.stock) || 0;
-          // Se for produto por peso, quantity é em gramas
-          const newStock = Math.max(0, currentStock + Number(quantity));
+      const qty = Number(quantity) || 0;
+      if (qty === 0) {
+        showNotification('⚠️ Quantidade inválida. Nenhuma alteração aplicada.', 'warning');
+        return;
+      }
 
-          return {
-            ...p,
-            stock: newStock,
-            updated_at: new Date().toISOString()
-          };
-        }
-        return p;
-      });
-      
-      // 3. Salva NOVAMENTE no localStorage
-      saveProductsDirectly(updatedProducts);
-      
-      // 4. Atualiza o estado local
-      setList(updatedProducts);
-      
-      // 5. Atualiza o bulkStockUpdates se estiver no modo massa
+      const success = updateStockDirect(productId, qty);
+      if (!success) throw new Error('Falha ao atualizar estoque');
+
+      // Forçar sincronização imediata (o contexto também escuta eventos)
+      try {
+        syncWithStorage();
+      } catch (err) {
+        console.warn('Não foi possível forçar syncWithStorage():', err);
+      }
+
+      // Atualiza estado local de bulk caso esteja em modo massa
       if (bulkStockMode) {
-        setBulkStockUpdates(prev => ({
-          ...prev,
-          [productId]: 0 // Reseta para 0 após aplicar
-        }));
+        setBulkStockUpdates(prev => ({ ...prev, [productId]: 0 }));
       }
-      
-      // 6. Mostra notificação
-      const updatedProduct = updatedProducts.find(p => p.id === productId);
-      if (updatedProduct) {
-        showNotification(`✅ ${quantity} unidades adicionadas ao estoque de "${updatedProduct.name}"!`, 'success');
-      }
+
+      // Mostrar notificação com o produto atualizado (busca na lista atualizada)
+      const updated = ctxProducts.find(p => p.id === productId) || list.find(p => p.id === productId) || null;
+      const name = updated ? updated.name : productId;
+      showNotification(`✅ Estoque atualizado em ${qty} para "${name}"`, 'success');
     } catch (error) {
       console.error('Erro ao atualizar estoque:', error);
       showNotification('❌ Erro ao atualizar estoque', 'error');
@@ -446,46 +410,26 @@ export default function Products() {
         showNotification("⚠️ Nenhuma alteração de estoque foi feita.", 'warning');
         return;
       }
+      // Aplica atualizações via updateStockDirect para cada produto
+      const entries = Object.entries(bulkStockUpdates).filter(([, v]) => v > 0);
+      entries.forEach(([id, val]) => {
+        try {
+          updateStockDirect(Number(id), Number(val));
+        } catch (err) {
+          console.error('Erro ao aplicar atualização em massa para', id, err);
+        }
+      });
 
-      // 1. Carrega produtos diretamente do localStorage
-      const products = getProductsDirectly();
-      
-      // 2. Aplica todas as atualizações
-      const updatedProducts = products.map(p => {
-        const addQty = bulkStockUpdates[p.id] || 0;
-        if (addQty > 0) {
-          const currentStock = Number(p.stock) || 0;
-          const newStock = Math.max(0, currentStock + addQty);
-          
-          return {
-            ...p,
-            stock: newStock,
-            updated_at: new Date().toISOString()
-          };
-        }
-        return p;
-      });
-      
-      // 3. Salva NOVAMENTE no localStorage
-      saveProductsDirectly(updatedProducts);
-      
-      // 4. Atualiza o estado local
-      setList(updatedProducts);
-      
-      // 5. Sair do modo massa
+      // Forçar sincronização
+      try { syncWithStorage(); } catch (err) { console.warn(err); }
+
+      // Resetar estado local
       setBulkStockMode(false);
-      
-      // 6. Resetar atualizações
       const resetUpdates = {};
-      updatedProducts.forEach(p => {
-        if (p && p.id) {
-          resetUpdates[p.id] = 0;
-        }
-      });
+      list.forEach(p => { if (p && p.id) resetUpdates[p.id] = 0; });
       setBulkStockUpdates(resetUpdates);
-      
-      // 7. Mostra notificação
-      const updatedCount = Object.values(bulkStockUpdates).filter(v => v > 0).length;
+
+      const updatedCount = entries.length;
       showNotification(`✅ Estoque atualizado em ${updatedCount} produtos!`, 'success');
     } catch (error) {
       console.error('Erro ao aplicar estoque em massa:', error);
@@ -661,9 +605,8 @@ export default function Products() {
         throw new Error("Falha ao adicionar produto");
       }
       
-      // Atualiza a lista sincronizando com localStorage
-      const updatedProducts = getProductsDirectly();
-      setList(updatedProducts);
+      // Sincroniza com o contexto/storage (o contexto escuta eventos e atualizará a lista)
+      try { syncWithStorage(); } catch (err) { console.warn('syncWithStorage falhou:', err); }
       
       setForm(emptyForm());
       setError(null);
@@ -728,9 +671,8 @@ export default function Products() {
         throw new Error("Falha ao atualizar produto");
       }
       
-      // Atualiza a lista sincronizando com localStorage
-      const updatedProducts = getProductsDirectly();
-      setList(updatedProducts);
+      // Sincroniza com o contexto/storage (o contexto escuta eventos e atualizará a lista)
+      try { syncWithStorage(); } catch (err) { console.warn('syncWithStorage falhou:', err); }
       
       setForm(emptyForm());
       setEditing(false);
@@ -761,9 +703,8 @@ export default function Products() {
         throw new Error("Falha ao excluir produto");
       }
       
-      // Atualiza a lista sincronizando com localStorage
-      const updatedProducts = getProductsDirectly();
-      setList(updatedProducts);
+      // Sincroniza com o contexto/storage (o contexto escuta eventos e atualizará a lista)
+      try { syncWithStorage(); } catch (err) { console.warn('syncWithStorage falhou:', err); }
       
       showNotification(`🗑️ Produto "${name}" excluído com sucesso!`, 'warning');
     } catch (error) {
@@ -1268,10 +1209,7 @@ export default function Products() {
           <div className="controls-actions">
             <button 
               className="button btn-secondary" 
-              onClick={() => {
-                const updatedProducts = getProductsDirectly();
-                setList(updatedProducts);
-              }}
+              onClick={() => { try { syncWithStorage(); } catch(err){ console.warn(err); } }}
               disabled={loading}
             >
               🔄 Atualizar
