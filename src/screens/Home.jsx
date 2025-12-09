@@ -247,69 +247,67 @@ export default function Home() {
     try {
       setCameraError(null);
       setCameraInitializing(true);
-      
+
       const cameraCheck = checkCameraSupport();
       if (!cameraCheck.supported) {
         setCameraError(cameraCheck.message);
         setCameraInitializing(false);
         return;
       }
-      
+
       stopCamera();
-      
-      const constraints = {
-        video: {
-          facingMode: 'user',
-          width: { ideal: 400 }, // Reduzido para gerar imagem menor
-          height: { ideal: 400 }
-        },
-        audio: false
-      };
-      
-      let stream;
+
+      // Tentar câmera traseira primeiro, depois frontal, depois sem facingMode
+      const baseConstraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
+      let stream = null;
+
       try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-        console.log('✅ Câmera acessada com sucesso');
-      } catch (err) {
-        console.error('❌ Erro ao acessar câmera:', err);
-        throw err;
+        stream = await navigator.mediaDevices.getUserMedia({ ...baseConstraints, video: { ...baseConstraints.video, facingMode: 'environment' } });
+        console.log('✅ Câmera traseira acessada com sucesso');
+      } catch (rearErr) {
+        console.log('⚠️ Falha ao acessar câmera traseira, tentando frontal...', rearErr);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ ...baseConstraints, video: { ...baseConstraints.video, facingMode: 'user' } });
+          console.log('✅ Câmera frontal acessada com sucesso');
+        } catch (frontErr) {
+          console.log('⚠️ Falha ao acessar com facingMode, tentando sem facingMode...', frontErr);
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(baseConstraints);
+            console.log('✅ Câmera acessada sem facingMode');
+          } catch (err) {
+            console.error('❌ Todas as tentativas de acessar câmera falharam:', err);
+            throw err;
+          }
+        }
       }
-      
+
       setCameraStream(stream);
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        
         await new Promise((resolve) => {
-          if (videoRef.current.readyState >= 1) {
-            resolve();
-          } else {
-            videoRef.current.onloadedmetadata = () => resolve();
-          }
+          if (videoRef.current.readyState >= 1) resolve();
+          else videoRef.current.onloadedmetadata = () => resolve();
         });
       }
-      
+
       setCameraInitializing(false);
-      
     } catch (err) {
       console.error('❌ Erro ao acessar câmera:', err);
       setCameraInitializing(false);
-      
+
       let errorMessage = 'Não foi possível acessar a câmera.';
-      
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        errorMessage = '🚫 Permissão de câmera negada.\n\n';
-        errorMessage += 'Para permitir o acesso:\n';
-        errorMessage += '1. Clique no ícone de cadeado na barra de endereços\n';
-        errorMessage += '2. Procure por "Câmera" nas permissões\n';
-        errorMessage += '3. Altere para "Permitir"\n';
-        errorMessage += '4. Recarregue a página e tente novamente';
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+        errorMessage = '🚫 Permissão de câmera negada.\n\nPara permitir o acesso:\n1. Clique no ícone de cadeado na barra de endereços\n2. Procure por "Câmera" nas permissões\n3. Altere para "Permitir"\n4. Recarregue a página e tente novamente';
+      } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
         errorMessage = '📷 Nenhuma câmera foi encontrada no seu dispositivo.';
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      } else if (err?.name === 'NotReadableError' || err?.name === 'TrackStartError') {
         errorMessage = '🔧 A câmera está sendo usada por outro aplicativo. Feche outros apps que usem câmera e tente novamente.';
+      } else if (err?.name === 'OverconstrainedError' || err?.name === 'ConstraintNotSatisfiedError') {
+        errorMessage = '⚙️ As configurações da câmera não são suportadas. Tente usar uma câmera diferente.';
       }
-      
+
       setCameraError(errorMessage);
     }
   };
