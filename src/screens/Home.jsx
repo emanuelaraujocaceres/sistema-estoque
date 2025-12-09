@@ -153,11 +153,10 @@ export default function Home() {
       
       if (data?.user) {
         console.log("Avatar atualizado com sucesso no Supabase:", data.user);
-        
-        // Atualiza o contexto local
-        // Atualiza o usuário no contexto sem recarregar a página
-        if (refreshUser) await refreshUser();
-        
+
+        // Atualiza o contexto local sem bloquear a UI
+        if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuário (avatar):', err));
+
         alert('✅ Foto de perfil atualizada com sucesso!');
       } else {
         throw new Error("Nenhum dado retornado do Supabase");
@@ -349,9 +348,43 @@ export default function Home() {
     // Atualizar o avatar
     await updateAvatar(photoData);
     
-    // Fechar a câmera
+                        🔄 Reiniciar Câmera
     closeCameraModal();
   };
+                    {cameraStream && (
+                      <button
+                        className="button btn-secondary"
+                        onClick={() => {
+                          if (cameraStream) {
+                            const tracks = cameraStream.getVideoTracks();
+                            if (tracks[0]) {
+                              const settings = tracks[0].getSettings();
+                              const newFacingMode = settings.facingMode === 'user' ? 'environment' : 'user';
+
+                              stopCamera();
+                              setTimeout(() => {
+                                navigator.mediaDevices.getUserMedia({
+                                  video: { facingMode: newFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+                                  audio: false
+                                })
+                                .then(newStream => {
+                                  setCameraStream(newStream);
+                                  if (videoRef.current) {
+                                    videoRef.current.srcObject = newStream;
+                                  }
+                                })
+                                .catch(err => {
+                                  console.error('Erro ao trocar câmera:', err);
+                                  setCameraError('Não foi possível trocar a câmera');
+                                });
+                              }, 100);
+                            }
+                          }
+                        }}
+                      >
+                        🔄 Trocar Câmera
+                      </button>
+                    )}
 
   const openCameraModal = () => {
     const cameraCheck = checkCameraSupport();
@@ -428,8 +461,8 @@ export default function Home() {
       alert("✅ Nome atualizado com sucesso!");
       setEditingName(false);
       
-      // Atualiza o contexto de autenticação localmente
-      if (refreshUser) await refreshUser();
+      // Atualiza o contexto de autenticação localmente sem bloquear a UI
+      if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuário (nome):', err));
       
       // Atualiza a interface sem forçar reload
       // refreshUser já foi chamado acima
@@ -462,8 +495,8 @@ export default function Home() {
       
       alert("✅ E-mail atualizado!\n\nVerifique sua caixa de entrada (e spam) para confirmar o novo e-mail.\n\nApós a confirmação, você precisará fazer login novamente.");
       setEditingEmail(false);
-      // Atualiza o contexto do usuário localmente (se disponível)
-      if (refreshUser) await refreshUser();
+      // Atualiza o contexto do usuário localmente (fire-and-forget)
+      if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuário (email):', err));
     } catch (err) {
       console.error("Erro ao atualizar e-mail:", err);
       alert(`❌ Erro ao atualizar e-mail: ${err.message || "Erro desconhecido"}\n\nVerifique se o e-mail já não está em uso.`);
@@ -887,22 +920,58 @@ export default function Home() {
                   
                   <div className="camera-controls">
                     {cameraStream && (
-                      <button 
-                        className="button btn-secondary"
-                        onClick={() => {
-                          if (cameraStream) {
-                            stopCamera();
-                            setTimeout(() => {
-                              startCamera();
-                            }, 100);
-                          }
-                        }}
-                        disabled={cameraInitializing}
-                      >
-                        🔄 Reiniciar Câmera
-                      </button>
+                      <>
+                        <button 
+                          className="button btn-secondary"
+                          onClick={() => {
+                            if (cameraStream) {
+                              stopCamera();
+                              setTimeout(() => {
+                                startCamera();
+                              }, 100);
+                            }
+                          }}
+                          disabled={cameraInitializing}
+                        >
+                          🔄 Reiniciar Câmera
+                        </button>
+
+                        <button 
+                          className="button btn-secondary"
+                          onClick={() => {
+                            if (cameraStream) {
+                              const tracks = cameraStream.getVideoTracks();
+                              if (tracks[0]) {
+                                const settings = tracks[0].getSettings();
+                                const newFacingMode = settings.facingMode === 'user' ? 'environment' : 'user';
+
+                                stopCamera();
+                                setTimeout(() => {
+                                  navigator.mediaDevices.getUserMedia({
+                                    video: { facingMode: newFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+                                    audio: false
+                                  })
+                                  .then(newStream => {
+                                    setCameraStream(newStream);
+                                    if (videoRef.current) {
+                                      videoRef.current.srcObject = newStream;
+                                    }
+                                  })
+                                  .catch(err => {
+                                    console.error('Erro ao trocar câmera:', err);
+                                    setCameraError('Não foi possível trocar a câmera');
+                                  });
+                                }, 100);
+                              }
+                            }
+                          }}
+                          disabled={cameraInitializing}
+                        >
+                          🔄 Trocar Câmera
+                        </button>
+                      </>
                     )}
-                    
+
                     <button 
                       className="button btn-primary btn-lg"
                       onClick={takePhoto}
