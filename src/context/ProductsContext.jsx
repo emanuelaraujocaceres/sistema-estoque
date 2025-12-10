@@ -1,7 +1,6 @@
 ﻿import React, { createContext, useState, useContext, useEffect } from 'react';
 import { DEFAULT_PRODUCTS, STORAGE_KEY } from './productsConstants';
 import { loadProductsFromSupabase, syncProductsToSupabase, setupRealtimeListeners } from '../services/supabaseSync';
-import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../auth/supabaseClient';
 
 const ProductsContext = createContext();
@@ -12,7 +11,19 @@ export const useProducts = () => {
 };
 
 export const ProductsProvider = ({ children }) => {
-  const { user } = useAuth();
+  const [user, setUser] = useState(null);
+
+  // Monitorar mudanças de autenticação do Supabase
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
+
   const [products, setProducts] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -43,7 +54,7 @@ export const ProductsProvider = ({ children }) => {
 
   const [realtimeSubscription, setRealtimeSubscription] = useState(null);
 
-  // Sincronizar com localStorage
+  // Sincronizar com localStorage (sem tentar usar user que pode não estar disponível)
   useEffect(() => {
     try {
       const productsToSave = products.map(product => ({
@@ -61,21 +72,15 @@ export const ProductsProvider = ({ children }) => {
       }));
       
       localStorage.setItem(STORAGE_KEY, JSON.stringify(productsToSave));
-      
-      // Sincronizar com Supabase se usuário logado
-      if (user?.id) {
-        syncProductsToSupabase(productsToSave, user.id).catch(err => {
-          console.warn('Erro ao sincronizar com Supabase:', err);
-        });
-      }
     } catch (err) {
       console.error('Erro ao salvar produtos:', err);
     }
-  }, [products, user]);
+  }, [products]);
 
-  // Carregar produtos do Supabase quando o usuário fizer login
+  // Sincronizar com Supabase quando usuário faz login e carregar produtos da nuvem
   useEffect(() => {
     if (user?.id) {
+      // Carregar produtos do Supabase
       loadProductsFromSupabase(user.id).then(supabaseProducts => {
         if (supabaseProducts && Array.isArray(supabaseProducts) && supabaseProducts.length > 0) {
           console.log('📥 Carregando produtos do Supabase:', supabaseProducts.length);
@@ -85,14 +90,20 @@ export const ProductsProvider = ({ children }) => {
         console.warn('Erro ao carregar produtos do Supabase (usando localStorage):', err);
       });
 
-      // Setup realtime listeners
+      // Sincronizar produtos atualizados para Supabase
+      syncProductsToSupabase(products, user.id).catch(err => {
+        console.warn('Erro ao sincronizar com Supabase:', err);
+      });
+
+      // Setup realtime listeners para mudanças remotas
       const subscription = setupRealtimeListeners(user.id, () => {
-        // Recarregar produtos quando houver mudanças remotas
         loadProductsFromSupabase(user.id).then(supabaseProducts => {
           if (supabaseProducts && Array.isArray(supabaseProducts)) {
             console.log('🔄 Produtos sincronizados do Supabase (mudança remota)');
             setProducts(supabaseProducts);
           }
+        }).catch(err => {
+          console.warn('Erro ao recarregar produtos após mudança remota:', err);
         });
       });
 
