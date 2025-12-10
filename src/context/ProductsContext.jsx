@@ -187,6 +187,15 @@ export const ProductsProvider = ({ children }) => {
     };
     
     setProducts(prev => [...prev, newProduct]);
+    
+    // Sincronizar com Supabase se user estiver logado
+    if (user?.id) {
+      const productsToSync = [...products, newProduct];
+      syncProductsToSupabase(productsToSync, user.id).catch(err => {
+        console.warn('Erro ao sincronizar novo produto:', err);
+      });
+    }
+    
     return newProduct;
   };
 
@@ -211,11 +220,26 @@ export const ProductsProvider = ({ children }) => {
         return product;
       })
     );
+    
+    // Sincronizar com Supabase se user estiver logado
+    if (user?.id) {
+      syncProductsToSupabase(products, user.id).catch(err => {
+        console.warn('Erro ao sincronizar atualização:', err);
+      });
+    }
   };
 
   // Deletar produto
   const deleteProduct = (productId) => {
     setProducts(prevProducts => prevProducts.filter(p => p.id !== productId));
+    
+    // Sincronizar com Supabase se user estiver logado
+    if (user?.id) {
+      const updatedProducts = products.filter(p => p.id !== productId);
+      syncProductsToSupabase(updatedProducts, user.id).catch(err => {
+        console.warn('Erro ao sincronizar deleção:', err);
+      });
+    }
   };
 
   // Obter produto por ID
