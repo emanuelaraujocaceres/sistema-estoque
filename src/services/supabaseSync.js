@@ -5,6 +5,27 @@ const PRODUCTS_TABLE = 'produtos';
 const SALES_TABLE = 'vendas';
 const USERS_TABLE = 'clientes';
 
+// Gerar UUID v4 simples (compatível com Supabase)
+function generateUUID(seed) {
+  // Usa seed (ID do app) para gerar UUID determinístico
+  const str = String(seed);
+  const hash = str.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  
+  // Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  const uuid = [
+    ('00000000' + Math.abs(hash).toString(16)).slice(-8),
+    ('0000' + Math.abs(hash * 2).toString(16)).slice(-4),
+    ('0000' + Math.abs(hash * 3).toString(16)).slice(-4),
+    ('0000' + Math.abs(hash * 4).toString(16)).slice(-4),
+    ('000000000000' + Math.abs(hash * 5).toString(16)).slice(-12),
+  ].join('-');
+  
+  return uuid;
+}
+
 /**
  * Sincronizar produtos com Supabase
  * Tenta enviar para Supabase, fallback para localStorage
@@ -20,7 +41,7 @@ export async function syncProductsToSupabase(products, userId) {
     
     // Preparar dados para Supabase - MAPEAR CAMPOS DO APP PARA BANCO
     const productsToSync = products.map(p => ({
-      id: p.id,
+      id: generateUUID(p.id), // Converter ID para UUID
       user_id: userId,
       nome: p.name,
       descricao: p.descricao || '',
