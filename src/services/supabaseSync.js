@@ -1,9 +1,9 @@
 // src/services/supabaseSync.js - Sincronização em tempo real com Supabase
 import { supabase } from '../auth/supabaseClient';
 
-const PRODUCTS_TABLE = 'products';
-const SALES_TABLE = 'sales';
-const USERS_TABLE = 'users';
+const PRODUCTS_TABLE = 'produtos';
+const SALES_TABLE = 'vendas';
+const USERS_TABLE = 'clientes';
 
 /**
  * Sincronizar produtos com Supabase
@@ -13,26 +13,31 @@ export async function syncProductsToSupabase(products, userId) {
   if (!userId || !products) return false;
   
   try {
-    // Preparar dados para Supabase
+    // Preparar dados para Supabase - MAPEAR CAMPOS DO APP PARA BANCO
     const productsToSync = products.map(p => ({
       id: p.id,
       user_id: userId,
-      name: p.name,
-      sku: p.sku || '',
-      price: p.price || 0,
-      cost: p.cost || 0,
-      stock: p.stock || 0,
-      min_stock: p.min_stock || 0,
-      sale_type: p.saleType || 'unit',
-      price_per_kilo: p.saleType === 'weight' ? (p.pricePerKilo || p.price) : null,
-      created_at: p.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      nome: p.name,
+      descricao: p.descricao || '',
+      categoria: p.categoria || '',
+      preco_custo: parseFloat(p.cost) || 0,
+      preco_venda: parseFloat(p.price) || 0,
+      quantidade: parseInt(p.stock) || 0,
+      quantidade_minima: parseInt(p.min_stock) || 0,
+      unidade_medida: p.saleType === 'weight' ? 'kg' : 'un',
+      codigo_barras: p.sku || '',
+      fornecedor: p.fornecedor || '',
+      localizacao: p.localizacao || '',
+      imagem_url: p.imagem_url || '',
+      ativo: p.ativo !== false,
+      criado_em: p.created_at || new Date().toISOString(),
+      atualizado_em: new Date().toISOString(),
     }));
 
     // Usar upsert para criar ou atualizar
     const { error } = await supabase
       .from(PRODUCTS_TABLE)
-      .upsert(productsToSync, { onConflict: 'id,user_id' });
+      .upsert(productsToSync, { onConflict: 'id' });
 
     if (error) {
       console.warn('⚠️ Erro ao sincronizar produtos com Supabase:', error);
@@ -73,16 +78,22 @@ export async function loadProductsFromSupabase(userId) {
     // Converter formato Supabase para formato local
     return data.map(p => ({
       id: p.id,
-      name: p.name,
-      sku: p.sku,
-      price: p.price,
-      cost: p.cost,
-      stock: p.stock,
-      min_stock: p.min_stock,
-      saleType: p.sale_type,
-      pricePerKilo: p.price_per_kilo,
-      created_at: p.created_at,
-      updated_at: p.updated_at,
+      name: p.nome,
+      sku: p.codigo_barras,
+      price: p.preco_venda,
+      cost: p.preco_custo,
+      stock: p.quantidade,
+      min_stock: p.quantidade_minima,
+      saleType: p.unidade_medida === 'kg' ? 'weight' : 'unit',
+      pricePerKilo: p.unidade_medida === 'kg' ? p.preco_venda : undefined,
+      descricao: p.descricao,
+      categoria: p.categoria,
+      fornecedor: p.fornecedor,
+      localizacao: p.localizacao,
+      imagem_url: p.imagem_url,
+      ativo: p.ativo,
+      created_at: p.criado_em,
+      updated_at: p.atualizado_em,
     }));
   } catch (err) {
     console.error('❌ Erro crítico ao carregar produtos:', err);
@@ -99,14 +110,17 @@ export async function syncSaleToSupabase(saleData, userId) {
   try {
     const saleToSync = {
       user_id: userId,
-      items: saleData.items || [],
-      total: saleData.total || 0,
-      payment_method: saleData.paymentMethod || 'dinheiro',
-      amount_received: saleData.amountReceived || null,
-      change: saleData.change || null,
-      status: 'completed',
-      created_at: new Date().toISOString(),
-      transaction_id: saleData.transactionId || null,
+      codigo: saleData.codigo || '',
+      cliente_nome: saleData.clienteName || '',
+      cliente_contato: saleData.clienteContato || '',
+      itens: saleData.items || [],
+      subtotal: parseFloat(saleData.subtotal) || 0,
+      desconto: parseFloat(saleData.discount) || 0,
+      total: parseFloat(saleData.total) || 0,
+      forma_pagamento: saleData.paymentMethod || 'dinheiro',
+      status: 'concluida',
+      observacoes: saleData.observacoes || '',
+      criado_em: new Date().toISOString(),
     };
 
     const { error } = await supabase
