@@ -8,6 +8,7 @@ function Sales() {
   const [cart, setCart] = useState([]);
   const [weightInputs, setWeightInputs] = useState({});
   const [payment, setPayment] = useState("dinheiro");
+  const [amountReceived, setAmountReceived] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [lastUpdate, setLastUpdate] = useState(Date.now());
@@ -678,7 +679,10 @@ function Sales() {
                         <select
                           className="payment-select"
                           value={payment}
-                          onChange={e => setPayment(e.target.value)}
+                          onChange={e => {
+                            setPayment(e.target.value);
+                            setAmountReceived(""); // Reset troco quando mudar forma de pagamento
+                          }}
                           disabled={loading}
                         >
                           <option value="dinheiro">💵 Dinheiro</option>
@@ -687,6 +691,33 @@ function Sales() {
                           <option value="cartao_debito">💳 Cartão de Débito</option>
                         </select>
                       </div>
+
+                      {payment === "dinheiro" && (
+                        <div className="payment-method">
+                          <label>💰 Valor Recebido (para calcular troco):</label>
+                          <input
+                            type="number"
+                            className="payment-select"
+                            placeholder="Ex: 100.00"
+                            value={amountReceived}
+                            onChange={e => setAmountReceived(e.target.value)}
+                            disabled={loading || cart.length === 0}
+                            step="0.01"
+                            min="0"
+                          />
+                          {amountReceived && parseFloat(amountReceived) >= 0 && (
+                            <div className="change-display">
+                              <span className="change-label">Troco:</span>
+                              <span className={`change-amount ${parseFloat(amountReceived) < totalVenda ? 'insufficient' : ''}`}>
+                                R$ {Math.max(0, parseFloat(amountReceived) - totalVenda).toFixed(2)}
+                              </span>
+                              {parseFloat(amountReceived) < totalVenda && (
+                                <span className="change-warning">⚠️ Valor insuficiente</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     
                     <div className="total-section">

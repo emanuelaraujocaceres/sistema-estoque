@@ -332,7 +332,7 @@ export default function Home() {
     const canvas = canvasRef.current;
     
     if (video.videoWidth === 0 || video.videoHeight === 0) {
-      alert('⚠️ A câmera não está pronta. Aguarde um momento.');
+      alert('A câmera não está pronta. Aguarde um momento.');
       return;
     }
     
@@ -359,7 +359,7 @@ export default function Home() {
     }
     
     const userConfirmed = window.confirm(
-      '📸 Tirar foto para o perfil\n\n' +
+      'Tirar foto para o perfil\n\n' +
       '1. Posicione seu rosto no quadro\n' +
       '2. Mantenha a câmera estável\n' +
       '3. Clique em "Permitir" quando o navegador solicitar acesso à câmera\n\n' +

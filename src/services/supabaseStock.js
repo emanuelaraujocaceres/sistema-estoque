@@ -1,12 +1,6 @@
 // src/services/supabaseStock.js - COMPLETO E CONFIGURADO
-import { createClient } from '@supabase/supabase-js';
-
-// 🔥 CREDENCIAIS CONFIGURADAS
-const supabaseUrl = 'https://fsktcwbtzrnnkjpzfchv.supabase.co';
-const supabaseKey = 'sb_publishable_y0mFmK-_hfg2yXz5DRcCHQ_zZYE-cyY';
-
-// Criar cliente Supabase
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// ⚠️ IMPORTANTE: Importar supabase de supabaseClient.js para evitar múltiplas instâncias
+import { supabase } from '../auth/supabaseClient';
 
 export const supabaseStockService = {
   // 🔥 ATUALIZAR ESTOQUE NO SUPABASE

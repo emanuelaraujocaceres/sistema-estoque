@@ -741,6 +741,40 @@
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
 }
 
+.change-display {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--primary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.change-label {
+  font-size: 0.9rem;
+  color: var(--gray-600);
+  font-weight: 500;
+}
+
+.change-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.change-amount.insufficient {
+  color: var(--danger);
+}
+
+.change-warning {
+  font-size: 0.85rem;
+  color: var(--danger);
+  font-weight: 600;
+  margin-top: var(--space-xs);
+}
+
 .total-section {
   display: flex;
   justify-content: space-between;

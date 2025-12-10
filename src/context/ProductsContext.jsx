@@ -1,5 +1,8 @@
 ﻿import React, { createContext, useState, useContext, useEffect } from 'react';
 import { DEFAULT_PRODUCTS, STORAGE_KEY } from './productsConstants';
+import { loadProductsFromSupabase, syncProductsToSupabase, setupRealtimeListeners } from '../services/supabaseSync';
+import { useAuth } from '../auth/AuthContext';
+import { supabase } from '../auth/supabaseClient';
 
 const ProductsContext = createContext();
 
@@ -9,13 +12,13 @@ export const useProducts = () => {
 };
 
 export const ProductsProvider = ({ children }) => {
+  const { user } = useAuth();
   const [products, setProducts] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY); // Usar mesma key que storage.js
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Converter para estrutura unificada se necessário
           return parsed.map(product => ({
             id: product.id,
             name: product.name || product.nome || 'Produto sem nome',
@@ -35,13 +38,14 @@ export const ProductsProvider = ({ children }) => {
       console.error('Erro ao carregar produtos:', err);
     }
     
-    // Retornar estrutura padrão compatível com storage.js
     return DEFAULT_PRODUCTS;
   });
 
+  const [realtimeSubscription, setRealtimeSubscription] = useState(null);
+
+  // Sincronizar com localStorage
   useEffect(() => {
     try {
-      // Salvar com estrutura unificada
       const productsToSave = products.map(product => ({
         id: product.id,
         name: product.name,
@@ -57,10 +61,50 @@ export const ProductsProvider = ({ children }) => {
       }));
       
       localStorage.setItem(STORAGE_KEY, JSON.stringify(productsToSave));
+      
+      // Sincronizar com Supabase se usuário logado
+      if (user?.id) {
+        syncProductsToSupabase(productsToSave, user.id).catch(err => {
+          console.warn('Erro ao sincronizar com Supabase:', err);
+        });
+      }
     } catch (err) {
       console.error('Erro ao salvar produtos:', err);
     }
-  }, [products]);
+  }, [products, user]);
+
+  // Carregar produtos do Supabase quando o usuário fizer login
+  useEffect(() => {
+    if (user?.id) {
+      loadProductsFromSupabase(user.id).then(supabaseProducts => {
+        if (supabaseProducts && Array.isArray(supabaseProducts) && supabaseProducts.length > 0) {
+          console.log('📥 Carregando produtos do Supabase:', supabaseProducts.length);
+          setProducts(supabaseProducts);
+        }
+      }).catch(err => {
+        console.warn('Erro ao carregar produtos do Supabase (usando localStorage):', err);
+      });
+
+      // Setup realtime listeners
+      const subscription = setupRealtimeListeners(user.id, () => {
+        // Recarregar produtos quando houver mudanças remotas
+        loadProductsFromSupabase(user.id).then(supabaseProducts => {
+          if (supabaseProducts && Array.isArray(supabaseProducts)) {
+            console.log('🔄 Produtos sincronizados do Supabase (mudança remota)');
+            setProducts(supabaseProducts);
+          }
+        });
+      });
+
+      setRealtimeSubscription(subscription);
+
+      return () => {
+        if (subscription) {
+          supabase.removeChannel(subscription);
+        }
+      };
+    }
+  }, [user?.id]);
 
   // Sincronizar automaticamente quando houver mudanças externas
   useEffect(() => {
