@@ -16,6 +16,7 @@ export const ProductsProvider = ({ children }) => {
   // Monitorar mudanças de autenticação do Supabase
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔐 Auth state changed:', event, 'User:', session?.user?.id);
       setUser(session?.user || null);
     });
 
@@ -88,11 +89,6 @@ export const ProductsProvider = ({ children }) => {
         }
       }).catch(err => {
         console.warn('Erro ao carregar produtos do Supabase (usando localStorage):', err);
-      });
-
-      // Sincronizar produtos atualizados para Supabase
-      syncProductsToSupabase(products, user.id).catch(err => {
-        console.warn('Erro ao sincronizar com Supabase:', err);
       });
 
       // Setup realtime listeners para mudanças remotas
@@ -187,13 +183,21 @@ export const ProductsProvider = ({ children }) => {
     };
     
     setProducts(prev => [...prev, newProduct]);
+    console.log('➕ Produto adicionado:', newProduct.name, 'User:', user?.id);
     
     // Sincronizar com Supabase se user estiver logado
     if (user?.id) {
       const productsToSync = [...products, newProduct];
-      syncProductsToSupabase(productsToSync, user.id).catch(err => {
-        console.warn('Erro ao sincronizar novo produto:', err);
-      });
+      console.log('📤 Sincronizando', productsToSync.length, 'produtos com Supabase...');
+      syncProductsToSupabase(productsToSync, user.id)
+        .then(result => {
+          console.log('✅ Sincronização bem-sucedida:', result);
+        })
+        .catch(err => {
+          console.error('❌ Erro ao sincronizar novo produto:', err);
+        });
+    } else {
+      console.warn('⚠️ User não logado, produto salvo apenas localmente');
     }
     
     return newProduct;

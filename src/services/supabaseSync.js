@@ -10,9 +10,14 @@ const USERS_TABLE = 'clientes';
  * Tenta enviar para Supabase, fallback para localStorage
  */
 export async function syncProductsToSupabase(products, userId) {
-  if (!userId || !products) return false;
+  if (!userId || !products) {
+    console.warn('⚠️ syncProductsToSupabase: userId ou products ausentes', { userId, hasProducts: !!products });
+    return false;
+  }
   
   try {
+    console.log('🔄 [supabaseSync] Sincronizando', products.length, 'produtos...', { userId });
+    
     // Preparar dados para Supabase - MAPEAR CAMPOS DO APP PARA BANCO
     const productsToSync = products.map(p => ({
       id: p.id,
@@ -34,20 +39,22 @@ export async function syncProductsToSupabase(products, userId) {
       atualizado_em: new Date().toISOString(),
     }));
 
+    console.log('📝 [supabaseSync] Primeiro produto formatado:', productsToSync[0]);
+
     // Usar upsert para criar ou atualizar
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from(PRODUCTS_TABLE)
       .upsert(productsToSync, { onConflict: 'id' });
 
     if (error) {
-      console.warn('⚠️ Erro ao sincronizar produtos com Supabase:', error);
+      console.error('❌ [supabaseSync] Erro ao fazer upsert:', error);
       return false;
     }
 
-    console.log('✅ Produtos sincronizados com Supabase');
+    console.log('✅ [supabaseSync] Sucesso! Produtos sincronizados:', productsToSync.length);
     return true;
   } catch (err) {
-    console.error('❌ Erro crítico na sincronização:', err);
+    console.error('❌ [supabaseSync] Erro crítico:', err);
     return false;
   }
 }
