@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { makeSale } from "../services/storage";
+import { makeSale, recordCashWithdrawal } from "../services/storage";
 import { useStock } from '../hooks/useStock';
 import "./Sales.css";
 
@@ -348,6 +348,25 @@ function Sales() {
   const handleCashWithdrawalChange = (e) => {
     const value = parseFloat(e.target.value) || 0;
     setCashWithdrawal(value);
+  };
+
+  const handleCashWithdrawal = () => {
+    if (cashWithdrawal <= 0) {
+      alert('⚠️ Informe um valor válido para retirada!');
+      return;
+    }
+
+    const confirmMessage = `Confirmar retirada de R$ ${cashWithdrawal.toFixed(2)} do caixa?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      recordCashWithdrawal(cashWithdrawal);
+      alert(`✅ Retirada de R$ ${cashWithdrawal.toFixed(2)} registrada com sucesso!`);
+      setCashWithdrawal(0);
+    } catch (error) {
+      console.error('Erro ao registrar retirada:', error);
+      alert('❌ Erro ao registrar retirada de dinheiro');
+    }
   };
 
   return (

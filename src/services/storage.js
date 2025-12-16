@@ -646,3 +646,27 @@ export function forceSync() {
   }));
   return true;
 }
+
+// Função para registrar retiradas de dinheiro
+export function recordCashWithdrawal(amount) {
+  try {
+    if (amount <= 0) {
+      throw new Error('Valor inválido para retirada');
+    }
+
+    const withdrawals = JSON.parse(localStorage.getItem('cash_withdrawals') || '[]');
+    const newWithdrawal = {
+      amount,
+      date: new Date().toISOString(),
+    };
+
+    withdrawals.push(newWithdrawal);
+    localStorage.setItem('cash_withdrawals', JSON.stringify(withdrawals));
+
+    console.log('Retirada registrada:', newWithdrawal);
+    return true;
+  } catch (error) {
+    console.error('Erro ao registrar retirada:', error);
+    throw error;
+  }
+}
