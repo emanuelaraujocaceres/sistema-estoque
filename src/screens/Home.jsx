@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "./Home.css";
 
 export default function Home() {
-  const { user, supabase, refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   
   const [editingName, setEditingName] = useState(false);
