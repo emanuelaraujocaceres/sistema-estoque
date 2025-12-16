@@ -12,6 +12,7 @@ function Sales() {
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [lastUpdate, setLastUpdate] = useState(Date.now());
+  const [cashWithdrawal, setCashWithdrawal] = useState(0); // Novo estado para retirada de dinheiro
   
   const { products } = useStock();
 
@@ -343,6 +344,11 @@ function Sales() {
   const totalVenda = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
   // removed unused helper setSelectedCategoryAndScroll
+
+  const handleCashWithdrawalChange = (e) => {
+    const value = parseFloat(e.target.value) || 0;
+    setCashWithdrawal(value);
+  };
 
   return (
     <div className="sales-page-container">

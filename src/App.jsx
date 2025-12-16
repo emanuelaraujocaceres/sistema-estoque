@@ -5,7 +5,7 @@ import Products from "./screens/Products";
 import Sales from "./screens/Sales";
 import Reports from "./screens/Reports";
 import Login from "./screens/Login";
-import { AuthProvider } from "./auth/AuthContext";
+import { AuthProvider } from "./services/auth/AuthContext";
 import { ProductsProvider } from "./context/ProductsContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { initDefaultProducts } from "./services/storage";

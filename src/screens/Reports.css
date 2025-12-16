@@ -1053,3 +1053,45 @@
     align-self: flex-start;
   }
 }
+
+/* Estilos para Exportação em PDF */
+.pdf-export {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  color: #333;
+  line-height: 1.5;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-export h1, .pdf-export h2, .pdf-export h3 {
+  color: #000;
+  margin-bottom: 10px;
+}
+
+.pdf-export table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.pdf-export table th, .pdf-export table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.pdf-export table th {
+  background: #f4f4f4;
+  font-weight: bold;
+}
+
+.pdf-export .footer {
+  margin-top: 20px;
+  font-size: 10px;
+  text-align: center;
+  color: #666;
+}
