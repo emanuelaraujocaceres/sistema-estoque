@@ -670,3 +670,14 @@ export function recordCashWithdrawal(amount) {
     throw error;
   }
 }
+
+// Função para buscar retiradas de dinheiro
+export function getCashWithdrawals() {
+  try {
+    const withdrawals = JSON.parse(localStorage.getItem('cash_withdrawals') || '[]');
+    return withdrawals;
+  } catch (error) {
+    console.error('Erro ao buscar retiradas:', error);
+    return [];
+  }
+}

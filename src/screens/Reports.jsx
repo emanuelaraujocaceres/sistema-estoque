@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from "react";
-import { getSales, getProducts } from "../services/storage";
+import { getSales, getProducts, getCashWithdrawals } from "../services/storage";
 import html2pdf from "html2pdf.js";
 import "./Reports.css";
 
@@ -23,9 +23,10 @@ function Reports() {
       setLoading(true);
       setError(null);
 
-      const [salesData, productsData] = await Promise.all([
+      const [salesData, productsData, withdrawalsData] = await Promise.all([
         Promise.resolve(getSales()),
-        Promise.resolve(getProducts())
+        Promise.resolve(getProducts()),
+        Promise.resolve(getCashWithdrawals())
       ]);
 
       // Validação de dados
@@ -37,7 +38,19 @@ function Reports() {
         throw new Error("Dados de produtos inválidos");
       }
 
-      setSales(salesData);
+      if (!Array.isArray(withdrawalsData)) {
+        throw new Error("Dados de retiradas inválidos");
+      }
+
+      const withdrawalsAsSales = withdrawalsData.map(withdrawal => ({
+        id: `withdrawal_${withdrawal.date}`,
+        created_at: withdrawal.date,
+        total: -withdrawal.amount,
+        paymentMethod: "retirada",
+        items: [],
+      }));
+
+      setSales([...salesData, ...withdrawalsAsSales]);
       setProducts(productsData);
     } catch (err) {
       console.error("Erro ao carregar relatórios:", err);
@@ -232,6 +245,7 @@ function Reports() {
               <option value="pix">🏦 PIX</option>
               <option value="cartao_credito">💳 Cartão de Crédito</option>
               <option value="cartao_debito">💳 Cartão de Débito</option>
+              <option value="retirada">💰 Retirada</option>
             </select>
           </div>
 
@@ -347,6 +361,7 @@ function Reports() {
                         {method.method === 'pix' && '🏦 PIX'}
                         {method.method === 'cartao_credito' && '💳 Cartão de Crédito'}
                         {method.method === 'cartao_debito' && '💳 Cartão de Débito'}
+                        {method.method === 'retirada' && '💰 Retirada'}
                         {method.method === 'desconhecido' && '❓ Desconhecido'}
                       </div>
                       <div className="method-percentage">{method.percentage}%</div>
@@ -438,6 +453,7 @@ function Reports() {
                                 {sale.paymentMethod === 'pix' && '🏦'}
                                 {sale.paymentMethod === 'cartao_credito' && '💳'}
                                 {sale.paymentMethod === 'cartao_debito' && '💳'}
+                                {sale.paymentMethod === 'retirada' && '💰'}
                                 {sale.paymentMethod || '❓'}
                               </span>
                             </td>
