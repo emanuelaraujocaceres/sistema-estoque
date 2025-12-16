@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://your-supabase-url.supabase.co';
-const supabaseKey = 'your-supabase-key';
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://your-supabase-url.supabase.co';
+const supabaseKey = process.env.REACT_APP_SUPABASE_KEY || 'your-supabase-key';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const AuthContext = createContext();
@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const fetchSession = async () => {
-            const { data: session, error } = await supabase.auth.getSession();
+            const { data: { session }, error } = await supabase.auth.getSession();
             if (error) console.error('Erro ao buscar sessão:', error);
             setUser(session?.user || null);
             setLoading(false);
