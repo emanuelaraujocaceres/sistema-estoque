@@ -23,9 +23,14 @@ export const AuthProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        const session = supabase.auth.session();
-        setUser(session?.user || null);
-        setLoading(false);
+        const fetchSession = async () => {
+            const { data: session, error } = await supabase.auth.getSession();
+            if (error) console.error('Erro ao buscar sessão:', error);
+            setUser(session?.user || null);
+            setLoading(false);
+        };
+
+        fetchSession();
 
         const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
             console.log('Auth state changed:', event, 'User:', session?.user);
