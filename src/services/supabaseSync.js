@@ -1,5 +1,5 @@
 // src/services/supabaseSync.js - Sincronização em tempo real com Supabase
-import supabase from '../services/supabaseClient';
+import { supabase } from '../lib/supabase'; // ✅ MUDOU AQUI!
 
 const PRODUCTS_TABLE = 'produtos';
 const SALES_TABLE = 'vendas';

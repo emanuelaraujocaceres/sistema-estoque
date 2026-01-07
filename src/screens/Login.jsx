@@ -1,9 +1,9 @@
 ﻿import { useState } from "react";
-import { useAuth } from "../services/auth/AuthContext";
+import { useAuth } from "../auth/AuthContext"; // ✅ MUDOU AQUI! (não services/auth/)
 import { useNavigate } from "react-router-dom";
 
 export default function Login(){
-  const { signIn } = useAuth();
+  const { login } = useAuth(); // ✅ MUDOU: de 'signIn' para 'login' (conforme AuthContext)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,7 +13,7 @@ export default function Login(){
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn(email, password);
+      await login(email, password); // ✅ MUDOU: de 'signIn' para 'login'
       nav("/");
     } catch (err) {
       alert(err.message || "Erro ao entrar");

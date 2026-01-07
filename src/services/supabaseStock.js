@@ -1,6 +1,5 @@
-// src/services/supabaseStock.js - Wrapper simplificado
-// Usa supabaseSync.js para todas as operações
-import supabase from '../services/supabaseClient';
+// CORRIGIDO: Importa da instância única
+import { supabase } from '../lib/supabase'; // ✅ MUDOU AQUI!
 
 export const supabaseStockService = {
   async checkConnection() {
