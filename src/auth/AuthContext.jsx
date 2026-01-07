@@ -1,17 +1,15 @@
 ﻿import React, { createContext, useContext, useEffect, useState } from "react";
-import { getSupabase } from '../lib/supabase'; // ✅ Importa o getter, não a instância
+import { supabase } from '../lib/supabase'; // ✅ Importa diretamente
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  // Obter instância única dentro do componente
-  const supabase = getSupabase();
 
   useEffect(() => {
-    console.log('🔧 [AuthContext] Instância Supabase obtida via getSupabase()')
+    console.log('🔧 [AuthContext] Inicializando com supabase singleton')
+    console.log('🔧 Instância ID:', supabase?.supabaseUrl?.substring(0, 30) || 'N/A')
     
     // Buscar sessão atual
     supabase.auth.getSession().then(({ data }) => {
@@ -42,7 +40,7 @@ export function AuthProvider({ children }) {
       console.log('🔧 [AuthContext] Limpando subscription')
       subscription.unsubscribe()
     }
-  }, [supabase]); // ✅ Adiciona supabase como dependência
+  }, []);
 
   const signIn = async (email, password) => {
     setLoading(true);
