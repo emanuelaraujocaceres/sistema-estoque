@@ -1,46 +1,46 @@
-﻿import { createClient } from '@supabase/supabase-js'
+﻿// src/lib/supabase.ts - VERSÃO DEFINITIVA
+import { createClient } from '@supabase/supabase-js'
 
-// Singleton global - NÃO exporte diretamente
-let supabaseInstance: ReturnType<typeof createClient> | null = null
+// VARIÁVEIS DE AMBIENTE - VERIFIQUE SE ESTÃO CORRETAS!
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const getSupabase = () => {
-  if (!supabaseInstance) {
-    console.log('🔧 [SUPABASE DEBUG] Criando NOVA instância Supabase singleton...')
-    
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// DEBUG: Mostrar variáveis (apenas em desenvolvimento)
+if (import.meta.env.DEV) {
+  console.log('🔧 [SUPABASE] URL:', supabaseUrl ? '✅ Configurada' : '❌ Faltando')
+  console.log('🔧 [SUPABASE] Key:', supabaseAnonKey ? '✅ Configurada' : '❌ Faltando')
+}
 
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Variáveis de ambiente do Supabase não configuradas')
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('❌ Variáveis de ambiente do Supabase não configuradas!')
+}
+
+// 🔥🔥🔥 SINGLETON GLOBAL DEFINITIVO 🔥🔥🔥
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+    storageKey: 'supabase-auth-token-UNICO-GLOBAL' // NOME ÚNICO
+  },
+  global: {
+    // Evita logs excessivos
+    headers: {
+      'X-Client-Info': 'supabase-js/2.87.0'
     }
+  }
+})
 
-    supabaseInstance = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: false,
-        storageKey: 'supabase-auth-token-singleton-unique-key'
-      },
-      global: {
-        // Desabilita debug no console
-        fetch: (...args) => fetch(...args)
-      }
-    })
+// DEBUG: Marcar no window para verificação
+if (typeof window !== 'undefined') {
+  // Remove qualquer instância anterior
+  if ((window as any).__SUPABASE_SINGLETON) {
+    console.warn('⚠️ Já existe uma instância anterior no window')
   }
   
-  return supabaseInstance
+  (window as any).__SUPABASE_SINGLETON = supabase
+  console.log('✅ [SUPABASE] Singleton registrado como window.__SUPABASE_SINGLETON')
 }
 
-// Exportar apenas a função getter, não a instância
-// export const supabase = getSupabase()  // ❌ REMOVA ESTA LINHA
-
-// Helper para verificar autenticação
-export const checkAuth = async () => {
-  const supabase = getSupabase() // ✅ Obtém instância única
-  const { data: { session }, error } = await supabase.auth.getSession()
-  if (error) {
-    console.error('Erro na sessão:', error)
-    return null
-  }
-  return session
-}
+// Exportar APENAS esta instância
+export { supabase }
