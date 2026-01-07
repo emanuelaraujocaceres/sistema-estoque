@@ -12,7 +12,8 @@
     "@supabase/supabase-js": "^2.87.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.10.1"
+    "react-router-dom": "^7.10.1",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.5",
