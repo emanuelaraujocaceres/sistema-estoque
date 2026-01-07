@@ -10,11 +10,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     console.log('🔧 [AuthContext] Inicializando com supabase singleton')
     console.log('🔧 Instância ID:', supabase?.supabaseUrl?.substring(0, 30) || 'N/A')
-    
+
     // Buscar sessão atual
     supabase.auth.getSession().then(({ data }) => {
       console.log('🔧 [AuthContext] Sessão inicial:', data?.session?.user?.email)
-      
+
       if (data?.session?.user) {
         setUser(data.session.user);
       }
@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
     // Listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('🔧 [AuthContext] Auth state changed:', _event, 'User:', session?.user?.email)
-      
+
       if (session?.user) {
         setUser(session.user);
       } else {
@@ -42,29 +42,41 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const signIn = async (email, password) => {
+  const login = async (email, password) => {
     setLoading(true);
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) throw error;
-    
-    setUser(data.user);
-    return data.user;
+    return data;
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
     setUser(null);
-    localStorage.removeItem('products_app_data');
-    localStorage.removeItem('sales_app_data');
-    localStorage.removeItem('user_avatar');
+  };
+
+  // VALOR DO CONTEXTO - TUDO QUE SERÁ DISPONIBILIZADO
+  const value = {
+    user,
+    loading,
+    login,
+    signOut,
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, supabase }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+// HOOK PERSONALIZADO para usar o AuthContext
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
+}
+
