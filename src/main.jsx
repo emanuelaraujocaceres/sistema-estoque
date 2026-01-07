@@ -1,6 +1,5 @@
 ﻿import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './test-supabase'
 import './index.css'
 import './improvements.css'
 import App from './App.jsx'
@@ -10,4 +9,5 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>,
 )
+
 
