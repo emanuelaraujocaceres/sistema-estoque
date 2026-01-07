@@ -1,6 +1,6 @@
 ﻿import { createClient } from '@supabase/supabase-js'
 
-// Singleton global
+// Singleton global - NÃO exporte diretamente
 let supabaseInstance: ReturnType<typeof createClient> | null = null
 
 export const getSupabase = () => {
@@ -14,39 +14,29 @@ export const getSupabase = () => {
       throw new Error('Variáveis de ambiente do Supabase não configuradas')
     }
 
-    console.log('🔧 [SUPABASE DEBUG] URL:', supabaseUrl)
-    console.log('🔧 [SUPABASE DEBUG] Key starts with:', supabaseKey.substring(0, 10) + '...')
-
     supabaseInstance = createClient(supabaseUrl, supabaseKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
         storageKey: 'supabase-auth-token-singleton-unique-key'
+      },
+      global: {
+        // Desabilita debug no console
+        fetch: (...args) => fetch(...args)
       }
     })
-
-    // Debug no navegador
-    if (typeof window !== 'undefined') {
-      if ((window as any).__SUPABASE_INSTANCE) {
-        console.error('🚨 ERRO CRÍTICO: Já existe uma instância Supabase no window!')
-      } else {
-        (window as any).__SUPABASE_INSTANCE = supabaseInstance
-        console.log('🔧 [SUPABASE DEBUG] Instância registrada no window.__SUPABASE_INSTANCE')
-      }
-    }
-  } else {
-    console.log('🔧 [SUPABASE DEBUG] Retornando instância existente')
   }
   
   return supabaseInstance
 }
 
-// Exportar a instância única
-export const supabase = getSupabase()
+// Exportar apenas a função getter, não a instância
+// export const supabase = getSupabase()  // ❌ REMOVA ESTA LINHA
 
 // Helper para verificar autenticação
 export const checkAuth = async () => {
+  const supabase = getSupabase() // ✅ Obtém instância única
   const { data: { session }, error } = await supabase.auth.getSession()
   if (error) {
     console.error('Erro na sessão:', error)

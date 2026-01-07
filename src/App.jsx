@@ -1,34 +1,47 @@
-﻿import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import { useEffect } from "react";
+﻿import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Home from "./screens/Home";
 import Products from "./screens/Products";
 import Sales from "./screens/Sales";
 import Reports from "./screens/Reports";
 import Login from "./screens/Login";
-import { AuthProvider } from './auth/AuthContext';
+import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ProductsProvider } from "./context/ProductsContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { initDefaultProducts } from "./services/storage";
 import "./App.css";
 
-export default function App() {
-  // Inicializar produtos padrão
-  useEffect(() => {
-    try {
-      initDefaultProducts();
-    } catch (error) {
-      console.error("Erro ao inicializar produtos:", error);
-    }
-  }, []);
+function AppContent() {
+  const { user, loading } = useAuth();
+  const [productsInitialized, setProductsInitialized] = useState(false);
 
-  
+  // Inicializar produtos padrão apenas uma vez
+  useEffect(() => {
+    if (!productsInitialized) {
+      try {
+        initDefaultProducts();
+        setProductsInitialized(true);
+      } catch (error) {
+        console.error("Erro ao inicializar produtos:", error);
+      }
+    }
+  }, [productsInitialized]);
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Carregando sistema...</p>
+      </div>
+    );
+  }
 
   return (
     <ProductsProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <div className="app">
-            {/* Header */}
+      <BrowserRouter>
+        <div className="app">
+          {/* Header - só mostra se estiver logado */}
+          {user && (
             <header className="header">
               <div className="header-container">
                 <div className="header-left">
@@ -48,91 +61,75 @@ export default function App() {
                   <Link to="/reports" className="nav-link">
                     <span className="nav-icon">📊</span> Relatórios
                   </Link>
-                  
-                  <div className="nav-divider"></div>
-                  
-                  
                 </nav>
               </div>
             </header>
+          )}
 
-            {/* Ferramentas de Desenvolvimento */}
-            
+          {/* Main Content */}
+          <main className="main">
+            <Routes>
+              {/* Redireciona raiz baseado no login */}
+              <Route path="/" element={
+                user ? <Navigate to="/home" /> : <Navigate to="/login" />
+              } />
+              
+              <Route path="/login" element={
+                user ? <Navigate to="/home" /> : <Login />
+              } />
+              
+              <Route path="/home" element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/products" element={
+                <ProtectedRoute>
+                  <Products />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/sales" element={
+                <ProtectedRoute>
+                  <Sales />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/reports" element={
+                <ProtectedRoute>
+                  <Reports />
+                </ProtectedRoute>
+              } />
+              
+              {/* Página 404 */}
+              <Route path="*" element={
+                <ProtectedRoute>
+                  <div className="not-found-container">
+                    <h1>404 - Página não encontrada</h1>
+                    <Link to="/home" className="button">Voltar para Home</Link>
+                  </div>
+                </ProtectedRoute>
+              } />
+            </Routes>
+          </main>
 
-            {/* Main Content */}
-            <main className="main">
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <Home />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/products" element={
-                  <ProtectedRoute>
-                    <Products />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/sales" element={
-                  <ProtectedRoute>
-                    <Sales />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <Reports />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Página 404 */}
-                <Route path="*" element={
-                  <ProtectedRoute>
-                    <div className="not-found-container">
-                      <div className="not-found-card">
-                        <div className="not-found-icon">❌</div>
-                        <h2>404 - Página não encontrada</h2>
-                        <p>A página que você está procurando não existe ou foi movida.</p>
-                        <div className="not-found-actions">
-                          <Link to="/" className="button btn-primary">
-                            🏠 Voltar para Home
-                          </Link>
-                          <button 
-                            className="button btn-secondary" 
-                            onClick={() => window.history.back()}
-                          >
-                            ↩️ Voltar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </ProtectedRoute>
-                } />
-              </Routes>
-            </main>
-
-            {/* Footer */}
+          {/* Footer - só mostra se estiver logado */}
+          {user && (
             <footer className="footer">
-              <div className="footer-content">
-                <p>Sistema Estoque & Caixa © {new Date().getFullYear()} - Todos os direitos reservados</p>
-                <p className="footer-version">Versão 2.0.0 | Desenvolvido com React + Vite</p>
-                <div className="footer-links">
-                  <a href="#" className="footer-link" onClick={(e) => { e.preventDefault(); alert('Em breve!'); }}>
-                    📖 Documentação
-                  </a>
-                  <span className="footer-separator">•</span>
-                  <a href="#" className="footer-link" onClick={(e) => { e.preventDefault(); alert('Contato: suporte@estoqueapp.com'); }}>
-                    📧 Suporte
-                  </a>
-                </div>
-              </div>
+              <p>Sistema Estoque & Caixa © {new Date().getFullYear()}</p>
             </footer>
-          </div>
-        </BrowserRouter>
-      </AuthProvider>
+          )}
+        </div>
+      </BrowserRouter>
     </ProductsProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
