@@ -1,9 +1,10 @@
-// src/hooks/useSupabaseData.js
+// src/hooks/useSupabaseData.js - VERSÃO CORRIGIDA
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
+import { supabase } from '../lib/supabase'; // ✅ Importa diretamente da instância única
 
 export function useSupabaseData(table, options = {}) {
-  const { user, supabase } = useAuth();
+  const { user } = useAuth(); // ✅ Apenas user, supabase vem de import direto
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -174,7 +175,7 @@ export function useProdutos(options = {}) {
   const buscarPorCodigo = async (codigo) => {
     if (!codigo) return null;
     
-    const { data, error } = await supabase
+    const { data, error } = await supabase // ✅ Agora supabase está definido
       .from('produtos')
       .select('*')
       .eq('codigo_barras', codigo)
@@ -193,7 +194,7 @@ export function useProdutos(options = {}) {
     
     return await update(produtoId, {
       quantidade: novaQuantidade,
-      ...(motigo && { ultimo_ajuste: motivo })
+      ...(motivo && { ultimo_ajuste: motivo })
     });
   };
   

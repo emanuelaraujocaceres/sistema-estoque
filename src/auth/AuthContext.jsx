@@ -1,5 +1,5 @@
 ﻿import React, { createContext, useContext, useEffect, useState } from "react";
-import supabase from '../services/supabaseClient';
+import { supabase } from '../lib/supabase'; // ✅ CORRETO: Importa da instância única
 import { syncUserToSupabase, loadUserFromSupabase } from "../services/supabaseSync";
 
 const AuthContext = createContext();
@@ -9,6 +9,9 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // DEBUG: Verificar instância
+    console.log('🔧 [AuthContext] Usando instância Supabase singleton')
+    
     // Buscar sessão atual
     supabase.auth.getSession().then(({ data }) => {
       if (data?.session?.user) {
@@ -24,7 +27,9 @@ export function AuthProvider({ children }) {
     });
 
     // Listener para mudanças de autenticação
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('🔧 [AuthContext] Auth state changed:', _event)
+      
       if (session?.user) {
         setUser(session.user);
         // Sincronizar quando o usuário fizer login
@@ -43,7 +48,7 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    return () => listener?.subscription?.unsubscribe?.();
+    return () => subscription.unsubscribe();
   }, []);
 
   const refreshUser = async () => {
@@ -92,7 +97,8 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, supabase, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, refreshUser }}>
+      {/* ❌ REMOVIDO: supabase do value - NÃO é necessário! */}
       {children}
     </AuthContext.Provider>
   );
