@@ -1,7 +1,7 @@
 ﻿import React, { createContext, useState, useContext, useEffect } from 'react';
 import { DEFAULT_PRODUCTS, STORAGE_KEY } from './productsConstants';
 import { loadProductsFromSupabase, syncProductsToSupabase, setupRealtimeListeners } from '../services/supabaseSync';
-import supabase from '../services/supabaseClient';
+import { supabase } from '../lib/supabase.ts';
 
 const ProductsContext = createContext();
 
