@@ -1,74 +1,46 @@
-﻿// src/lib/supabase.ts - SINGLETON DEFINITIVO CORRIGIDO
+﻿// src/lib/supabase.ts - FUNCIONA EM PRODUÇÃO E DESENVOLVIMENTO
 import { createClient } from '@supabase/supabase-js'
 
-// ✅ 1. Obter variáveis de ambiente
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-// ✅ 2. Validação
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('❌ Variáveis de ambiente do Supabase não configuradas!')
+// 🔥 CREDENCIAIS DIRETAS (substitua pelas SUAS)
+const CONFIG = {
+  url: 'https://zywsgazlzkeawlcjxscq.supabase.co',
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5d3NnYXpsemtlYXdsY2p4c2NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyMTQ4MTMsImV4cCI6MjA1MTc5MDgxM30.c_FhJzO4tq-DtxwMDQmeCbE9mZmBUKt6A3U7sIY0xEM'
 }
 
-// ✅ 3. VARIÁVEL GLOBAL NO MÓDULO (não no window)
-let supabaseInstance: ReturnType<typeof createClient> | null = null
-let initializationCount = 0
+// SINGLETON ABSOLUTO
+let _instance: ReturnType<typeof createClient> | null = null
 
-// ✅ 4. FUNÇÃO getSupabase() que controla o singleton
 export function getSupabase() {
-  // Se já existe a instância, retorna ela
-  if (supabaseInstance) {
-    return supabaseInstance
-  }
+  if (_instance) return _instance
   
-  // Contador para debug
-  initializationCount++
-  console.log(`🔧 [Supabase] Criando instância #${initializationCount}`)
+  console.log('🚀 Criando Supabase singleton...')
   
-  // Se já existe no window (HMR recarregou), usa ela
-  if (typeof window !== 'undefined' && (window as any).__SUPABASE_GLOBAL) {
-    console.warn('⚠️ [Supabase] Recuperando instância do window (HMR detectado)')
-    supabaseInstance = (window as any).__SUPABASE_GLOBAL
-    return supabaseInstance
-  }
-  
-  // Cria nova instância
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+  _instance = createClient(CONFIG.url, CONFIG.key, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: false,
-      storageKey: 'supabase-auth-token-app-unico-v2'
-    },
-    global: {
-      // Headers customizados para identificar a instância
-      headers: {
-        'X-Client-Instance': `singleton-${Date.now()}`
-      }
+      storageKey: 'supabase-prod-singleton'
     }
   })
   
-  // Salva no window para HMR
+  // 🔥 CRÍTICO: Salva no window APENAS UMA VEZ
   if (typeof window !== 'undefined') {
-    (window as any).__SUPABASE_GLOBAL = supabaseInstance
-    console.log('✅ [Supabase] Instância registrada globalmente')
+    // Remove qualquer outra instância
+    Object.keys(window).forEach(key => {
+      if (key.includes('SUPABASE') || key.includes('supabase')) {
+        delete (window as any)[key]
+      }
+    })
+    
+    ;(window as any).supabase = _instance
+    ;(window as any).__SUPABASE_SINGLE = _instance
+    
+    console.log('✅ Singleton registrado no window')
   }
   
-  return supabaseInstance
+  return _instance
 }
 
-// ✅ 5. Exporta a instância via getter (NÃO cria imediatamente)
+// Exporta a instância
 export const supabase = getSupabase()
-
-// ✅ 6. Debug helper
-export function debugSupabase() {
-  if (typeof window === 'undefined') return null
-  
-  return {
-    instanceCount: initializationCount,
-    windowInstance: !!(window as any).__SUPABASE_GLOBAL,
-    url: supabaseUrl ? '✅ Configurada' : '❌ Faltando',
-    key: supabaseAnonKey ? '✅ Configurada' : '❌ Faltando',
-    isSameInstance: supabaseInstance === (window as any).__SUPABASE_GLOBAL
-  }
-}
