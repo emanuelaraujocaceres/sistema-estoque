@@ -1,37 +1,34 @@
-<!doctype html>
-<html lang="pt-br">
+﻿<!doctype html>
+<html lang="pt-BR">
   <head>
-    <!-- PREVENT MULTIPLE INSTANCES -->
-    <script src="/preload-supabase.js"></script>
-    
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    
-    <!-- ✅ MANIFEST (O plugin VitePWA vai injetar automaticamente) -->
-    <!-- Não precisa do link se usar VitePWA, mas pode manter -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Estoque</title>
     <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    
-    <!-- ✅ META TAGS PWA -->
-    <meta name="theme-color" content="#2c7a7b">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <meta name="description" content="Sistema de gerenciamento de estoque e vendas" />
-    <title>Sistema Estoque & Caixa</title>
-    
-    <!-- ✅ ÍCONES APPLE -->
-    <link rel="apple-touch-icon" href="/icon-144x144.png" sizes="144x144">
-    <link rel="apple-touch-icon" href="/icon-192x192.png" sizes="192x192">
-    <link rel="apple-touch-icon" href="/icon-512x512.png" sizes="512x512">
-    
+    <!-- Script de pré-carregamento do Supabase (executa primeiro) -->
+    <script src="/preload-supabase.js"></script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     
-    <!-- ✅ O VitePWA injeta automaticamente o script do Service Worker -->
+    <!-- Script para garantir que Link não cause erro -->
+    <script>
+      // Polyfill para prevenir erro "Link is not defined"
+      if (typeof window !== 'undefined' && typeof window.Link === 'undefined') {
+        window.Link = null;
+        console.log('[Polyfill] Link global definido como null para prevenir erros');
+      }
+      
+      // Verificar se preload funcionou
+      if (window.__SUPABASE_PRELOAD__) {
+        console.log('[Verificação] Preload executado com sucesso');
+      } else {
+        console.warn('[Verificação] Preload não foi executado');
+      }
+    </script>
   </body>
 </html>
