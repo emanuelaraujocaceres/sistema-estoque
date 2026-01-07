@@ -2,18 +2,14 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import './improvements.css'
-import App from './App.jsx'
+
+// CORREÇÃO DE ENCODING DO CONSOLE - DEVE SER O PRIMEIRO
+import './utils/fix-console-log.js'
 
 // Limpar logs excessivos
 import './utils/clean-logs.js'
 
-// PROTEÇÃO: Verificar e prevenir erro "Link is not defined"
-if (typeof window !== 'undefined') {
-  // Verificar se o preload foi executado
-  if (!window.__SUPABASE_PRELOAD__) {
-    console.warn('[Main] Preload não executado. Verifique se preload-supabase.js está sendo carregado.');
-  }
-}
+import App from './App.jsx'
 
 console.log('[Main] Inicializando aplicação...');
 

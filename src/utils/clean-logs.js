@@ -1,33 +1,79 @@
-﻿// src/utils/clean-logs.js
-// Adicione isso ao seu main.jsx ou App.jsx para reduzir logs desnecessários
+﻿// src/utils/clean-logs.js - VERSÃO AGGRESSIVA
+// Remove TODOS os logs exceto erros críticos
 
-const originalLog = console.log;
-const originalWarn = console.warn;
-const originalError = console.error;
-
-// Filtra logs do Supabase/Auth muito verbosos
-console.log = function(...args) {
-  const message = args[0] || '';
+if (typeof window !== 'undefined') {
+  const originalConsole = { ...console };
   
-  // Filtra logs muito verbosos (mantém apenas os importantes)
-  const skipPatterns = [
-    '[AuthContext] Auth state changed',
-    '[AuthContext] Sessão inicial',
-    'Instancia ID:',
-    'Nenhum dado encontrado'
+  // Lista de logs permitidos (apenas estes serão mostrados)
+  const allowedPatterns = [
+    'ERROR',
+    'Error',
+    'error',
+    'FAILED',
+    'Failed',
+    'failed',
+    'Exception',
+    'exception',
+    'Cannot',
+    'Uncaught',
+    'SyntaxError',
+    'TypeError',
+    'ReferenceError'
   ];
   
-  const shouldSkip = skipPatterns.some(pattern => 
-    typeof message === 'string' && message.includes(pattern)
-  );
+  // Verificar se deve mostrar o log
+  const shouldShowLog = (args) => {
+    const firstArg = args[0] || '';
+    const message = String(firstArg);
+    
+    // Mostrar se contém padrão de erro
+    if (allowedPatterns.some(pattern => message.includes(pattern))) {
+      return true;
+    }
+    
+    // Mostrar logs que começam com [ERRO] ou [ERROR]
+    if (message.startsWith('[ERRO') || message.startsWith('[ERROR')) {
+      return true;
+    }
+    
+    // Mostrar logs de inicialização importantes
+    const importantLogs = [
+      '[Main] Inicializando',
+      '✅',
+      '❌',
+      '⚠️',
+      'Sistema pronto',
+      'Aplicação carregada'
+    ];
+    
+    if (importantLogs.some(pattern => message.includes(pattern))) {
+      return true;
+    }
+    
+    return false;
+  };
   
-  if (!shouldSkip) {
-    originalLog.apply(console, args);
-  }
-};
-
-// Mantém warns e errors originais
-console.warn = originalWarn;
-console.error = originalError;
-
-console.log('[Clean Logs] Filtro de logs ativado');
+  // Substituir funções do console
+  console.log = function(...args) {
+    if (shouldShowLog(args)) {
+      originalConsole.log.apply(console, args);
+    }
+  };
+  
+  console.info = function(...args) {
+    if (shouldShowLog(args)) {
+      originalConsole.info.apply(console, args);
+    }
+  };
+  
+  console.warn = function(...args) {
+    if (shouldShowLog(args)) {
+      originalConsole.warn.apply(console, args);
+    }
+  };
+  
+  // Sempre mostrar erros
+  console.error = originalConsole.error;
+  
+  console.log('[Clean Logs] Modo silencioso ativado - apenas erros e mensagens críticas');
+}

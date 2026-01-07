@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Console UTF-8</title>
+</head>
+<body>
+    <h1>Teste de Console UTF-8</h1>
+    <button onclick="testConsole()">Testar Console</button>
+    <button onclick="clearConsole()">Limpar Console</button>
+    
+    <div id="output" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+    
+    <script>
+        function testConsole() {
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+            
+            // Teste 1: Log simples
+            console.log('=== TESTE CONSOLE UTF-8 ===');
+            console.log('Texto normal: Olá Mundo!');
+            console.log('Texto com acentuação: Café, não, ção');
+            console.log('Texto com emoji: ✅ ❌ ⚠️ 🚀');
+            
+            // Teste 2: Objeto
+            console.log('Objeto de teste:', {
+                nome: 'João Silva',
+                idade: 30,
+                cidade: 'São Paulo'
+            });
+            
+            // Teste 3: Array
+            console.log('Array:', ['item1', 'item2', 'ítem3']);
+            
+            // Mostrar na página também
+            output.innerHTML = `
+                <h3>Logs enviados para o console:</h3>
+                <ul>
+                    <li>Texto normal: Olá Mundo!</li>
+                    <li>Texto com acentuação: Café, não, ção</li>
+                    <li>Texto com emoji: ✅ ❌ ⚠️ 🚀</li>
+                </ul>
+                <p><strong>Verifique o console do navegador (F12)</strong></p>
+                <p>Se você vê caracteres estranhos, é problema de encoding do navegador.</p>
+            `;
+        }
+        
+        function clearConsole() {
+            console.clear();
+            document.getElementById('output').innerHTML = '<p>Console limpo!</p>';
+        }
+        
+        // Teste automático
+        setTimeout(testConsole, 1000);
+    </script>
+</body>
+</html>
