@@ -1,16 +1,17 @@
-﻿// src/main.jsx
-import { StrictMode } from 'react'
+﻿import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import './improvements.css'
 import App from './App.jsx'
 
-// Polyfill para prevenir erros
+// Limpar logs excessivos
+import './utils/clean-logs.js'
+
+// PROTEÇÃO: Verificar e prevenir erro "Link is not defined"
 if (typeof window !== 'undefined') {
-  // Garantir que o preload foi executado
+  // Verificar se o preload foi executado
   if (!window.__SUPABASE_PRELOAD__) {
-    console.warn('[Main] Preload não executado. Executando agora...');
-    window.__SUPABASE_PRELOAD__ = true;
+    console.warn('[Main] Preload não executado. Verifique se preload-supabase.js está sendo carregado.');
   }
 }
 
