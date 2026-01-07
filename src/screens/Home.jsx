@@ -1,4 +1,4 @@
-ï»¿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
@@ -21,7 +21,7 @@ export default function Home() {
   const [loadingPassword, setLoadingPassword] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   
-  // Estados para a cÃ¢mera
+  // Estados para a câmera
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
   const [cameraError, setCameraError] = useState(null);
@@ -31,19 +31,19 @@ export default function Home() {
   
   // Avatar local
   const [avatarUrl, setAvatarUrl] = useState(() => {
-    // Tenta carregar do localStorage primeiro, depois dos metadados do usuÃ¡rio
+    // Tenta carregar do localStorage primeiro, depois dos metadados do usuário
     const savedAvatar = localStorage.getItem('user_avatar');
     return savedAvatar || user?.user_metadata?.avatar || null;
   });
 
-  // Atualizar avatar quando o usuÃ¡rio mudar
+  // Atualizar avatar quando o usuário mudar
   useEffect(() => {
     if (user?.user_metadata?.avatar && !localStorage.getItem('user_avatar')) {
       setAvatarUrl(user.user_metadata.avatar);
     }
   }, [user]);
 
-  // FunÃ§Ã£o para comprimir imagem (CRÃTICO para o Supabase)
+  // Função para comprimir imagem (CRÍTICO para o Supabase)
   const compressImage = (base64Image, maxWidth = 400, quality = 0.7) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -53,7 +53,7 @@ export default function Home() {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // Calcular novas dimensÃµes mantendo proporÃ§Ã£o
+        // Calcular novas dimensões mantendo proporção
         let width = img.width;
         let height = img.height;
         
@@ -77,7 +77,7 @@ export default function Home() {
     });
   };
 
-  // FunÃ§Ãµes de logout
+  // Funções de logout
   async function handleLogout() {
     if (window.confirm("Tem certeza que deseja sair da sua conta?")) {
       try {
@@ -91,38 +91,38 @@ export default function Home() {
     }
   }
 
-  // FunÃ§Ã£o para atualizar o avatar CORRIGIDA
+  // Função para atualizar o avatar CORRIGIDA
   async function updateAvatar(base64Image) {
     try {
       setUploadingAvatar(true);
       
-      // Verificar se o usuÃ¡rio estÃ¡ autenticado
+      // Verificar se o usuário está autenticado
       if (!user) {
-        throw new Error("UsuÃ¡rio nÃ£o autenticado");
+        throw new Error("Usuário não autenticado");
       }
       
-      // Verificar se a sessÃ£o do Supabase Ã© vÃ¡lida
+      // Verificar se a sessão do Supabase é válida
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) {
-        throw new Error(`Erro de sessÃ£o: ${sessionError.message}`);
+        throw new Error(`Erro de sessão: ${sessionError.message}`);
       }
       
       if (!sessionData.session) {
-        throw new Error("SessÃ£o expirada. FaÃ§a login novamente.");
+        throw new Error("Sessão expirada. Faça login novamente.");
       }
       
-      // Comprimir a imagem ANTES de salvar (CRÃTICO)
+      // Comprimir a imagem ANTES de salvar (CRÍTICO)
       console.log("Tamanho original (base64):", base64Image.length, "caracteres");
       const compressedImage = await compressImage(base64Image);
       console.log("Tamanho comprimido (base64):", compressedImage.length, "caracteres");
       
-      // Verificar se nÃ£o Ã© muito grande (limite do Supabase ~ 1KB para user_metadata)
+      // Verificar se não é muito grande (limite do Supabase ~ 1KB para user_metadata)
       if (compressedImage.length > 100000) { // ~100KB
-        console.warn("Imagem muito grande mesmo apÃ³s compressÃ£o:", compressedImage.length);
+        console.warn("Imagem muito grande mesmo após compressão:", compressedImage.length);
         // Salva apenas localmente e mostra aviso
         localStorage.setItem('user_avatar', compressedImage);
         setAvatarUrl(compressedImage);
-        alert('âœ… Foto salva localmente!\nâš ï¸ Imagem muito grande para sincronizar com a nuvem.\nRecomendado: Use uma imagem menor ou entre em contato com o suporte.');
+        alert('? Foto salva localmente!\n?? Imagem muito grande para sincronizar com a nuvem.\nRecomendado: Use uma imagem menor ou entre em contato com o suporte.');
         return;
       }
       
@@ -135,7 +135,7 @@ export default function Home() {
       // Tenta atualizar no Supabase - FORMA CORRETA
       const { data, error } = await supabase.auth.updateUser({
         data: { 
-          ...(user.user_metadata || {}), // MantÃ©m os metadados existentes
+          ...(user.user_metadata || {}), // Mantém os metadados existentes
           avatar: compressedImage 
         }
       });
@@ -155,9 +155,9 @@ export default function Home() {
         console.log("Avatar atualizado com sucesso no Supabase:", data.user);
 
         // Atualiza o contexto local sem bloquear a UI
-        if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuÃ¡rio (avatar):', err));
+        if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuário (avatar):', err));
 
-        alert('âœ… Foto de perfil atualizada com sucesso!');
+        alert('? Foto de perfil atualizada com sucesso!');
       } else {
         throw new Error("Nenhum dado retornado do Supabase");
       }
@@ -165,34 +165,34 @@ export default function Home() {
     } catch (err) {
       console.error('Erro detalhado ao atualizar avatar:', err);
       
-      // Tratamento especÃ­fico para erro de tamanho
+      // Tratamento específico para erro de tamanho
       if (err.message === 'IMAGEM_MUITO_GRANDE' || err.message.includes('too large')) {
-        alert('âš ï¸ A imagem Ã© muito grande para o Supabase.\nâœ… Foto salva apenas localmente.\n\nSoluÃ§Ã£o: Use uma imagem menor ou entre em contato com o suporte.');
+        alert('?? A imagem é muito grande para o Supabase.\n? Foto salva apenas localmente.\n\nSolução: Use uma imagem menor ou entre em contato com o suporte.');
       } else if (err.message.includes('Session expired')) {
-        alert('âš ï¸ Sua sessÃ£o expirou. FaÃ§a login novamente.');
+        alert('?? Sua sessão expirou. Faça login novamente.');
         localStorage.removeItem('user_avatar');
         navigate('/login');
       } else {
-        alert(`âš ï¸ Foto salva apenas localmente. Erro ao sincronizar:\n\n${err.message || 'Erro desconhecido'}\n\nTente novamente mais tarde.`);
+        alert(`?? Foto salva apenas localmente. Erro ao sincronizar:\n\n${err.message || 'Erro desconhecido'}\n\nTente novamente mais tarde.`);
       }
     } finally {
       setUploadingAvatar(false);
     }
   }
 
-  // FunÃ§Ã£o para selecionar imagem da galeria - CORRIGIDA
+  // Função para selecionar imagem da galeria - CORRIGIDA
   const handleImageSelect = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     
     if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione um arquivo de imagem vÃ¡lido (JPG, PNG, etc.)');
+      alert('Por favor, selecione um arquivo de imagem válido (JPG, PNG, etc.)');
       return;
     }
     
     // Limite mais conservador para o Supabase
     if (file.size > 2 * 1024 * 1024) { // 2MB limite
-      alert('A imagem Ã© muito grande. Por favor, selecione uma imagem menor que 2MB.');
+      alert('A imagem é muito grande. Por favor, selecione uma imagem menor que 2MB.');
       return;
     }
 
@@ -218,12 +218,12 @@ export default function Home() {
     e.target.value = null;
   };
 
-  // ====== FUNÃ‡Ã•ES DA CÃ‚MERA ======
+  // ====== FUNÇÕES DA CÂMERA ======
   const checkCameraSupport = () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       return {
         supported: false,
-        message: 'ğŸš« Seu navegador nÃ£o suporta acesso Ã  cÃ¢mera. Use Chrome, Firefox ou Safari.'
+        message: '?? Seu navegador não suporta acesso à câmera. Use Chrome, Firefox ou Safari.'
       };
     }
     
@@ -235,7 +235,7 @@ export default function Home() {
     if (!isSecureContext) {
       return {
         supported: false,
-        message: 'ğŸ”’ Acesso Ã  cÃ¢mera requer HTTPS ou localhost. Seu acesso atual nÃ£o Ã© seguro.'
+        message: '?? Acesso à câmera requer HTTPS ou localhost. Seu acesso atual não é seguro.'
       };
     }
     
@@ -256,25 +256,25 @@ export default function Home() {
 
       stopCamera();
 
-      // Tentar cÃ¢mera traseira primeiro, depois frontal, depois sem facingMode
+      // Tentar câmera traseira primeiro, depois frontal, depois sem facingMode
       const baseConstraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
       let stream = null;
 
       try {
         stream = await navigator.mediaDevices.getUserMedia({ ...baseConstraints, video: { ...baseConstraints.video, facingMode: 'environment' } });
-        console.log('âœ… CÃ¢mera traseira acessada com sucesso');
+        console.log('? Câmera traseira acessada com sucesso');
       } catch (rearErr) {
-        console.log('âš ï¸ Falha ao acessar cÃ¢mera traseira, tentando frontal...', rearErr);
+        console.log('?? Falha ao acessar câmera traseira, tentando frontal...', rearErr);
         try {
           stream = await navigator.mediaDevices.getUserMedia({ ...baseConstraints, video: { ...baseConstraints.video, facingMode: 'user' } });
-          console.log('âœ… CÃ¢mera frontal acessada com sucesso');
+          console.log('? Câmera frontal acessada com sucesso');
         } catch (frontErr) {
-          console.log('âš ï¸ Falha ao acessar com facingMode, tentando sem facingMode...', frontErr);
+          console.log('?? Falha ao acessar com facingMode, tentando sem facingMode...', frontErr);
           try {
             stream = await navigator.mediaDevices.getUserMedia(baseConstraints);
-            console.log('âœ… CÃ¢mera acessada sem facingMode');
+            console.log('? Câmera acessada sem facingMode');
           } catch (err) {
-            console.error('âŒ Todas as tentativas de acessar cÃ¢mera falharam:', err);
+            console.error('? Todas as tentativas de acessar câmera falharam:', err);
             throw err;
           }
         }
@@ -292,19 +292,19 @@ export default function Home() {
 
       setCameraInitializing(false);
     } catch (err) {
-      console.error('âŒ Erro ao acessar cÃ¢mera:', err);
+      console.error('? Erro ao acessar câmera:', err);
       setCameraInitializing(false);
 
-      let errorMessage = 'NÃ£o foi possÃ­vel acessar a cÃ¢mera.';
+      let errorMessage = 'Não foi possível acessar a câmera.';
 
       if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
-        errorMessage = 'ğŸš« PermissÃ£o de cÃ¢mera negada.\n\nPara permitir o acesso:\n1. Clique no Ã­cone de cadeado na barra de endereÃ§os\n2. Procure por "CÃ¢mera" nas permissÃµes\n3. Altere para "Permitir"\n4. Recarregue a pÃ¡gina e tente novamente';
+        errorMessage = '?? Permissão de câmera negada.\n\nPara permitir o acesso:\n1. Clique no ícone de cadeado na barra de endereços\n2. Procure por "Câmera" nas permissões\n3. Altere para "Permitir"\n4. Recarregue a página e tente novamente';
       } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
-        errorMessage = 'ğŸ“· Nenhuma cÃ¢mera foi encontrada no seu dispositivo.';
+        errorMessage = '?? Nenhuma câmera foi encontrada no seu dispositivo.';
       } else if (err?.name === 'NotReadableError' || err?.name === 'TrackStartError') {
-        errorMessage = 'ğŸ”§ A cÃ¢mera estÃ¡ sendo usada por outro aplicativo. Feche outros apps que usem cÃ¢mera e tente novamente.';
+        errorMessage = '?? A câmera está sendo usada por outro aplicativo. Feche outros apps que usem câmera e tente novamente.';
       } else if (err?.name === 'OverconstrainedError' || err?.name === 'ConstraintNotSatisfiedError') {
-        errorMessage = 'âš™ï¸ As configuraÃ§Ãµes da cÃ¢mera nÃ£o sÃ£o suportadas. Tente usar uma cÃ¢mera diferente.';
+        errorMessage = '?? As configurações da câmera não são suportadas. Tente usar uma câmera diferente.';
       }
 
       setCameraError(errorMessage);
@@ -313,7 +313,7 @@ export default function Home() {
 
   const stopCamera = () => {
     if (cameraStream) {
-      console.log('ğŸ›‘ Parando stream da cÃ¢mera');
+      console.log('?? Parando stream da câmera');
       cameraStream.getTracks().forEach(track => {
         track.stop();
       });
@@ -332,7 +332,7 @@ export default function Home() {
     const canvas = canvasRef.current;
     
     if (video.videoWidth === 0 || video.videoHeight === 0) {
-      alert('A cÃ¢mera nÃ£o estÃ¡ pronta. Aguarde um momento.');
+      alert('A câmera não está pronta. Aguarde um momento.');
       return;
     }
     
@@ -361,8 +361,8 @@ export default function Home() {
     const userConfirmed = window.confirm(
       'Tirar foto para o perfil\n\n' +
       '1. Posicione seu rosto no quadro\n' +
-      '2. Mantenha a cÃ¢mera estÃ¡vel\n' +
-      '3. Clique em "Permitir" quando o navegador solicitar acesso Ã  cÃ¢mera\n\n' +
+      '2. Mantenha a câmera estável\n' +
+      '3. Clique em "Permitir" quando o navegador solicitar acesso à câmera\n\n' +
       'Deseja continuar?'
     );
     
@@ -379,7 +379,7 @@ export default function Home() {
     setCameraInitializing(false);
   };
 
-  // Iniciar cÃ¢mera quando o modal abrir
+  // Iniciar câmera quando o modal abrir
   useEffect(() => {
     if (showCameraModal && !cameraStream && !cameraError) {
       const timer = setTimeout(() => {
@@ -397,21 +397,21 @@ export default function Home() {
     };
   }, []);
 
-  // ====== FUNÃ‡Ã•ES DE ATUALIZAÃ‡ÃƒO DE PERFIL ======
+  // ====== FUNÇÕES DE ATUALIZAÇÃO DE PERFIL ======
   
   async function saveName(e) {
     e?.preventDefault();
     if (!name.trim()) {
-      alert("Por favor, informe um nome vÃ¡lido.");
+      alert("Por favor, informe um nome válido.");
       return;
     }
     
     setLoadingName(true);
     try {
-      // Verificar sessÃ£o primeiro
+      // Verificar sessão primeiro
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
-      if (!sessionData.session) throw new Error("SessÃ£o expirada");
+      if (!sessionData.session) throw new Error("Sessão expirada");
       
       // Atualiza no Supabase
       const { error } = await supabase.auth.updateUser({ 
@@ -423,18 +423,18 @@ export default function Home() {
       
       if (error) throw error;
       
-      alert("âœ… Nome atualizado com sucesso!");
+      alert("? Nome atualizado com sucesso!");
       setEditingName(false);
       
-      // Atualiza o contexto de autenticaÃ§Ã£o localmente sem bloquear a UI
-      if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuÃ¡rio (nome):', err));
+      // Atualiza o contexto de autenticação localmente sem bloquear a UI
+      if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuário (nome):', err));
       
-      // Atualiza a interface sem forÃ§ar reload
-      // refreshUser jÃ¡ foi chamado acima
+      // Atualiza a interface sem forçar reload
+      // refreshUser já foi chamado acima
       
     } catch (err) {
       console.error("Erro ao atualizar nome:", err);
-      alert(`âŒ Erro ao atualizar nome: ${err.message || "Erro desconhecido"}\n\nVerifique sua conexÃ£o e tente novamente.`);
+      alert(`? Erro ao atualizar nome: ${err.message || "Erro desconhecido"}\n\nVerifique sua conexão e tente novamente.`);
     } finally {
       setLoadingName(false);
     }
@@ -443,12 +443,12 @@ export default function Home() {
   async function saveEmail(e) {
     e?.preventDefault();
     if (!newEmail || !newEmail.includes("@")) {
-      alert("Por favor, informe um e-mail vÃ¡lido.");
+      alert("Por favor, informe um e-mail válido.");
       return;
     }
     
     if (newEmail === user?.email) {
-      alert("Este jÃ¡ Ã© o seu e-mail atual.");
+      alert("Este já é o seu e-mail atual.");
       return;
     }
     
@@ -458,13 +458,13 @@ export default function Home() {
       
       if (error) throw error;
       
-      alert("âœ… E-mail atualizado!\n\nVerifique sua caixa de entrada (e spam) para confirmar o novo e-mail.\n\nApÃ³s a confirmaÃ§Ã£o, vocÃª precisarÃ¡ fazer login novamente.");
+      alert("? E-mail atualizado!\n\nVerifique sua caixa de entrada (e spam) para confirmar o novo e-mail.\n\nApós a confirmação, você precisará fazer login novamente.");
       setEditingEmail(false);
-      // Atualiza o contexto do usuÃ¡rio localmente (fire-and-forget)
-      if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuÃ¡rio (email):', err));
+      // Atualiza o contexto do usuário localmente (fire-and-forget)
+      if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuário (email):', err));
     } catch (err) {
       console.error("Erro ao atualizar e-mail:", err);
-      alert(`âŒ Erro ao atualizar e-mail: ${err.message || "Erro desconhecido"}\n\nVerifique se o e-mail jÃ¡ nÃ£o estÃ¡ em uso.`);
+      alert(`? Erro ao atualizar e-mail: ${err.message || "Erro desconhecido"}\n\nVerifique se o e-mail já não está em uso.`);
     } finally {
       setLoadingEmail(false);
     }
@@ -479,7 +479,7 @@ export default function Home() {
     }
     
     if (newPassword !== confirmPassword) {
-      alert("As senhas nÃ£o coincidem. Por favor, digite a mesma senha nos dois campos.");
+      alert("As senhas não coincidem. Por favor, digite a mesma senha nos dois campos.");
       return;
     }
     
@@ -491,7 +491,7 @@ export default function Home() {
       
       if (error) throw error;
       
-      alert("âœ… Senha alterada com sucesso!\n\nVocÃª serÃ¡ redirecionado para fazer login novamente.");
+      alert("? Senha alterada com sucesso!\n\nVocê será redirecionado para fazer login novamente.");
       setEditingPassword(false);
       setNewPassword("");
       setConfirmPassword("");
@@ -504,13 +504,13 @@ export default function Home() {
       
     } catch (err) {
       console.error("Erro ao alterar senha:", err);
-      alert(`âŒ Erro ao alterar senha: ${err.message || "Erro desconhecido"}\n\nCertifique-se de que a senha atende aos requisitos de seguranÃ§a.`);
+      alert(`? Erro ao alterar senha: ${err.message || "Erro desconhecido"}\n\nCertifique-se de que a senha atende aos requisitos de segurança.`);
     } finally {
       setLoadingPassword(false);
     }
   }
 
-  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || "UsuÃ¡rio";
+  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || "Usuário";
 
   return (
     <div className="home-container">
@@ -519,17 +519,17 @@ export default function Home() {
           <div>
             <h1>Meu Perfil</h1>
             <p className="welcome-text">
-              OlÃ¡, <span className="highlight">{displayName}</span>
+              Olá, <span className="highlight">{displayName}</span>
             </p>
           </div>
         </div>
       </div>
 
       <div className="home-grid">
-        {/* Perfil do UsuÃ¡rio */}
+        {/* Perfil do Usuário */}
         <div className="card profile-card">
           <div className="card-header">
-            <h2>ğŸ‘¤ Perfil do UsuÃ¡rio</h2>
+            <h2>?? Perfil do Usuário</h2>
             <span className="badge">Ativo</span>
           </div>
           
@@ -571,7 +571,7 @@ export default function Home() {
           <div className="profile-actions">
             <div className="avatar-upload-options">
               <label className="button btn-action file-label">
-                {uploadingAvatar ? 'âŸ³ Processando...' : 'ğŸ“ Escolher da Galeria'}
+                {uploadingAvatar ? '? Processando...' : '?? Escolher da Galeria'}
                 <input
                   type="file"
                   accept="image/*"
@@ -585,7 +585,7 @@ export default function Home() {
                 onClick={openCameraModal}
                 disabled={uploadingAvatar}
               >
-                {uploadingAvatar ? 'âŸ³ Processando...' : 'ğŸ“· Tirar Foto'}
+                {uploadingAvatar ? '? Processando...' : '?? Tirar Foto'}
               </button>
             </div>
             
@@ -594,27 +594,27 @@ export default function Home() {
               onClick={() => setEditingName(true)}
               disabled={loadingName}
             >
-              âœï¸ Alterar Nome
+              ?? Alterar Nome
             </button>
             <button 
               className="button btn-action"
               onClick={() => setEditingEmail(true)}
               disabled={loadingEmail}
             >
-              ğŸ“§ Alterar E-mail
+              ?? Alterar E-mail
             </button>
             <button 
               className="button btn-action"
               onClick={() => setEditingPassword(true)}
               disabled={loadingPassword}
             >
-              ğŸ”’ Alterar Senha
+              ?? Alterar Senha
             </button>
             <button
               className="button btn-logout"
               onClick={handleLogout}
             >
-              ğŸšª Sair da Conta
+              ?? Sair da Conta
             </button>
           </div>
         </div>
@@ -625,7 +625,7 @@ export default function Home() {
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h3>âœï¸ Alterar Nome</h3>
+              <h3>?? Alterar Nome</h3>
               <button 
                 className="modal-close"
                 onClick={() => {
@@ -634,7 +634,7 @@ export default function Home() {
                 }}
                 disabled={loadingName}
               >
-                âœ•
+                ?
               </button>
             </div>
             <div className="modal-content">
@@ -649,7 +649,7 @@ export default function Home() {
                     required
                     disabled={loadingName}
                   />
-                  <small className="form-hint">Este nome serÃ¡ exibido no seu perfil</small>
+                  <small className="form-hint">Este nome será exibido no seu perfil</small>
                 </div>
                 <div className="modal-actions">
                   <button 
@@ -657,7 +657,7 @@ export default function Home() {
                     type="submit"
                     disabled={loadingName || !name.trim()}
                   >
-                    {loadingName ? "âŸ³ Salvando..." : "ğŸ’¾ Salvar AlteraÃ§Ãµes"}
+                    {loadingName ? "? Salvando..." : "?? Salvar Alterações"}
                   </button>
                   <button 
                     className="button btn-secondary" 
@@ -682,7 +682,7 @@ export default function Home() {
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h3>ğŸ“§ Alterar E-mail</h3>
+              <h3>?? Alterar E-mail</h3>
               <button 
                 className="modal-close"
                 onClick={() => {
@@ -691,7 +691,7 @@ export default function Home() {
                 }}
                 disabled={loadingEmail}
               >
-                âœ•
+                ?
               </button>
             </div>
             <div className="modal-content">
@@ -707,13 +707,13 @@ export default function Home() {
                     required
                     disabled={loadingEmail}
                   />
-                  <small className="form-hint">VocÃª receberÃ¡ um e-mail de confirmaÃ§Ã£o</small>
+                  <small className="form-hint">Você receberá um e-mail de confirmação</small>
                 </div>
                 <div className="modal-note">
-                  âš ï¸ <strong>AtenÃ§Ã£o:</strong> ApÃ³s alterar o e-mail, vocÃª precisarÃ¡:
+                  ?? <strong>Atenção:</strong> Após alterar o e-mail, você precisará:
                   <ul className="note-list">
                     <li>Verificar sua caixa de entrada (e spam) para confirmar o novo e-mail</li>
-                    <li>Fazer login novamente apÃ³s a confirmaÃ§Ã£o</li>
+                    <li>Fazer login novamente após a confirmação</li>
                   </ul>
                 </div>
                 <div className="modal-actions">
@@ -722,7 +722,7 @@ export default function Home() {
                     type="submit"
                     disabled={loadingEmail || !newEmail.trim() || newEmail === user?.email}
                   >
-                    {loadingEmail ? "âŸ³ Enviando..." : "ğŸ“¤ Enviar ConfirmaÃ§Ã£o"}
+                    {loadingEmail ? "? Enviando..." : "?? Enviar Confirmação"}
                   </button>
                   <button 
                     className="button btn-secondary" 
@@ -747,7 +747,7 @@ export default function Home() {
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h3>ğŸ”’ Alterar Senha</h3>
+              <h3>?? Alterar Senha</h3>
               <button 
                 className="modal-close"
                 onClick={() => {
@@ -757,7 +757,7 @@ export default function Home() {
                 }}
                 disabled={loadingPassword}
               >
-                âœ•
+                ?
               </button>
             </div>
             <div className="modal-content">
@@ -769,12 +769,12 @@ export default function Home() {
                     type="password"
                     value={newPassword} 
                     onChange={e => setNewPassword(e.target.value)} 
-                    placeholder="MÃ­nimo 6 caracteres" 
+                    placeholder="Mínimo 6 caracteres" 
                     required
                     minLength="6"
                     disabled={loadingPassword}
                   />
-                  <small className="form-hint">Use uma senha forte com letras, nÃºmeros e sÃ­mbolos</small>
+                  <small className="form-hint">Use uma senha forte com letras, números e símbolos</small>
                 </div>
                 <div className="form-group">
                   <label>Confirmar Nova Senha</label>
@@ -790,7 +790,7 @@ export default function Home() {
                   />
                 </div>
                 <div className="modal-note">
-                  âš ï¸ <strong>AtenÃ§Ã£o:</strong> ApÃ³s alterar a senha, vocÃª serÃ¡ automaticamente desconectado e precisarÃ¡ fazer login novamente.
+                  ?? <strong>Atenção:</strong> Após alterar a senha, você será automaticamente desconectado e precisará fazer login novamente.
                 </div>
                 <div className="modal-actions">
                   <button 
@@ -798,7 +798,7 @@ export default function Home() {
                     type="submit"
                     disabled={loadingPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
                   >
-                    {loadingPassword ? "âŸ³ Alterando..." : "ğŸ”‘ Alterar Senha"}
+                    {loadingPassword ? "? Alterando..." : "?? Alterar Senha"}
                   </button>
                   <button 
                     className="button btn-secondary" 
@@ -819,22 +819,22 @@ export default function Home() {
         </div>
       )}
 
-      {/* Modal da CÃ¢mera */}
+      {/* Modal da Câmera */}
       {showCameraModal && (
         <div className="modal-overlay" onClick={closeCameraModal}>
           <div className="modal camera-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>ğŸ“· Tirar Foto do Perfil</h3>
+              <h3>?? Tirar Foto do Perfil</h3>
               <button className="modal-close" onClick={closeCameraModal} disabled={cameraInitializing}>
-                Ã—
+                ×
               </button>
             </div>
             
             <div className="modal-body">
               {cameraError ? (
                 <div className="camera-error">
-                  <div className="error-icon">âš ï¸</div>
-                  <h4>Erro ao acessar cÃ¢mera</h4>
+                  <div className="error-icon">??</div>
+                  <h4>Erro ao acessar câmera</h4>
                   <p style={{ whiteSpace: 'pre-line' }}>{cameraError}</p>
                   <div className="camera-error-actions">
                     <button 
@@ -842,13 +842,13 @@ export default function Home() {
                       onClick={startCamera}
                       disabled={cameraInitializing}
                     >
-                      âŸ³ Tentar novamente
+                      ? Tentar novamente
                     </button>
                     <button 
                       className="button btn-primary"
                       onClick={closeCameraModal}
                     >
-                      ğŸ“ Usar galeria
+                      ?? Usar galeria
                     </button>
                   </div>
                 </div>
@@ -858,7 +858,7 @@ export default function Home() {
                     {cameraInitializing ? (
                       <div className="camera-loading">
                         <div className="spinner"></div>
-                        <p>Inicializando cÃ¢mera...</p>
+                        <p>Inicializando câmera...</p>
                         <small>Aguarde e permita o acesso quando solicitado</small>
                       </div>
                     ) : (
@@ -879,8 +879,8 @@ export default function Home() {
                   </div>
                   
                   <div className="camera-instructions">
-                    <p>ğŸ“¸ Posicione seu rosto dentro do quadro</p>
-                    <small>Garanta boa iluminaÃ§Ã£o e foco</small>
+                    <p>?? Posicione seu rosto dentro do quadro</p>
+                    <small>Garanta boa iluminação e foco</small>
                   </div>
                   
                   <div className="camera-controls">
@@ -898,7 +898,7 @@ export default function Home() {
                           }}
                           disabled={cameraInitializing}
                         >
-                          âŸ³ Reiniciar CÃ¢mera
+                          ? Reiniciar Câmera
                         </button>
 
                         <button 
@@ -923,8 +923,8 @@ export default function Home() {
                                     }
                                   })
                                   .catch(err => {
-                                    console.error('Erro ao trocar cÃ¢mera:', err);
-                                    setCameraError('NÃ£o foi possÃ­vel trocar a cÃ¢mera');
+                                    console.error('Erro ao trocar câmera:', err);
+                                    setCameraError('Não foi possível trocar a câmera');
                                   });
                                 }, 100);
                               }
@@ -932,7 +932,7 @@ export default function Home() {
                           }}
                           disabled={cameraInitializing}
                         >
-                          âŸ³ Trocar CÃ¢mera
+                          ? Trocar Câmera
                         </button>
                       </>
                     )}
@@ -942,8 +942,8 @@ export default function Home() {
                       onClick={takePhoto}
                       disabled={!cameraStream || cameraInitializing || uploadingAvatar}
                     >
-                      {cameraInitializing ? 'âŸ³ Inicializando...' : 
-                       uploadingAvatar ? 'âŸ³ Salvando...' : 'ğŸ“¸ Tirar Foto'}
+                      {cameraInitializing ? '? Inicializando...' : 
+                       uploadingAvatar ? '? Salvando...' : '?? Tirar Foto'}
                     </button>
                   </div>
                 </>
