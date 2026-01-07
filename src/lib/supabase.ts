@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 
 // ?? CREDENCIAIS DIRETAS (substitua pelas SUAS)
 const CONFIG = {
-  url: 'https://zywsgazlzkeawlcjxscq.supabase.co',
-  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5d3NnYXpsemtlYXdsY2p4c2NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyMTQ4MTMsImV4cCI6MjA1MTc5MDgxM30.c_FhJzO4tq-DtxwMDQmeCbE9mZmBUKt6A3U7sIY0xEM'
+  url: 'https://fsktcwbtzrnnkjpzfchv.supabase.co',
+  key: 'sb_publishable_y0mFmK-_hfg2yXz5DRcCHQ_zZYE-cyY'
 }
 
 // SINGLETON ABSOLUTO
