@@ -1,5 +1,5 @@
 import { useState } from "react";
-import supabase from "../services/supabaseClient";
+import { supabase } from "../lib/supabase";
 
 export default function ChangeEmail() {
   const [newEmail, setNewEmail] = useState("");
@@ -38,3 +38,4 @@ export default function ChangeEmail() {
     </div>
   );
 }
+

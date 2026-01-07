@@ -1,5 +1,5 @@
 import { useState } from "react";
-import supabase from "../services/supabaseClient";
+import { supabase } from "../lib/supabase";
 
 export default function ChangePassword() {
   const [password, setPassword] = useState("");
@@ -39,3 +39,4 @@ export default function ChangePassword() {
     </div>
   );
 }
+
