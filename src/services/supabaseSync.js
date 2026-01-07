@@ -1,13 +1,13 @@
-// src/services/supabaseSync.js - Sincronização em tempo real com Supabase
-import { supabase } from '../lib/supabase'; // ✅ MUDOU AQUI!
+﻿// src/services/supabaseSync.js - SincronizaÃ§Ã£o em tempo real com Supabase
+import { supabase } from '../lib/supabase.ts'; // âœ… MUDOU AQUI!
 
 const PRODUCTS_TABLE = 'produtos';
 const SALES_TABLE = 'vendas';
 const USERS_TABLE = 'clientes';
 
-// Gerar UUID v4 simples (compatível com Supabase)
+// Gerar UUID v4 simples (compatÃ­vel com Supabase)
 function generateUUID(seed) {
-  // Usa seed (ID do app) para gerar UUID determinístico
+  // Usa seed (ID do app) para gerar UUID determinÃ­stico
   const str = String(seed);
   const hash = str.split('').reduce((a, b) => {
     a = ((a << 5) - a) + b.charCodeAt(0);
@@ -32,12 +32,12 @@ function generateUUID(seed) {
  */
 export async function syncProductsToSupabase(products, userId) {
   if (!userId || !products) {
-    console.warn('⚠️ syncProductsToSupabase: userId ou products ausentes', { userId, hasProducts: !!products });
+    console.warn('âš ï¸ syncProductsToSupabase: userId ou products ausentes', { userId, hasProducts: !!products });
     return false;
   }
   
   try {
-    console.log('🔄 [supabaseSync] Sincronizando', products.length, 'produtos...', { userId });
+    console.log('ðŸ”„ [supabaseSync] Sincronizando', products.length, 'produtos...', { userId });
     
     // Preparar dados para Supabase - MAPEAR CAMPOS DO APP PARA BANCO
     const productsToSync = products.map(p => ({
@@ -60,7 +60,7 @@ export async function syncProductsToSupabase(products, userId) {
       atualizado_em: new Date().toISOString(),
     }));
 
-    console.log('📝 [supabaseSync] Primeiro produto formatado:', productsToSync[0]);
+    console.log('ðŸ“ [supabaseSync] Primeiro produto formatado:', productsToSync[0]);
 
     // Usar upsert para criar ou atualizar
     const { data, error } = await supabase
@@ -68,14 +68,14 @@ export async function syncProductsToSupabase(products, userId) {
       .upsert(productsToSync, { onConflict: 'id' });
 
     if (error) {
-      console.error('❌ [supabaseSync] Erro ao fazer upsert:', error);
+      console.error('âŒ [supabaseSync] Erro ao fazer upsert:', error);
       return false;
     }
 
-    console.log('✅ [supabaseSync] Sucesso! Produtos sincronizados:', productsToSync.length);
+    console.log('âœ… [supabaseSync] Sucesso! Produtos sincronizados:', productsToSync.length);
     return true;
   } catch (err) {
-    console.error('❌ [supabaseSync] Erro crítico:', err);
+    console.error('âŒ [supabaseSync] Erro crÃ­tico:', err);
     return false;
   }
 }
@@ -94,12 +94,12 @@ export async function loadProductsFromSupabase(userId) {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.warn('⚠️ Erro ao carregar produtos do Supabase:', error);
+      console.warn('âš ï¸ Erro ao carregar produtos do Supabase:', error);
       return null;
     }
 
     if (!data || data.length === 0) {
-      console.log('ℹ️ Nenhum produto encontrado no Supabase');
+      console.log('â„¹ï¸ Nenhum produto encontrado no Supabase');
       return [];
     }
 
@@ -124,7 +124,7 @@ export async function loadProductsFromSupabase(userId) {
       updated_at: p.atualizado_em,
     }));
   } catch (err) {
-    console.error('❌ Erro crítico ao carregar produtos:', err);
+    console.error('âŒ Erro crÃ­tico ao carregar produtos:', err);
     return null;
   }
 }
@@ -156,14 +156,14 @@ export async function syncSaleToSupabase(saleData, userId) {
       .insert([saleToSync]);
 
     if (error) {
-      console.warn('⚠️ Erro ao sincronizar venda com Supabase:', error);
+      console.warn('âš ï¸ Erro ao sincronizar venda com Supabase:', error);
       return false;
     }
 
-    console.log('✅ Venda sincronizada com Supabase');
+    console.log('âœ… Venda sincronizada com Supabase');
     return true;
   } catch (err) {
-    console.error('❌ Erro crítico ao sincronizar venda:', err);
+    console.error('âŒ Erro crÃ­tico ao sincronizar venda:', err);
     return false;
   }
 }
@@ -183,25 +183,25 @@ export async function loadSalesFromSupabase(userId) {
       .limit(100);
 
     if (error) {
-      console.warn('⚠️ Erro ao carregar vendas do Supabase:', error);
+      console.warn('âš ï¸ Erro ao carregar vendas do Supabase:', error);
       return [];
     }
 
     return data || [];
   } catch (err) {
-    console.error('❌ Erro crítico ao carregar vendas:', err);
+    console.error('âŒ Erro crÃ­tico ao carregar vendas:', err);
     return [];
   }
 }
 
 /**
  * Setup de listeners em tempo real (Realtime do Supabase)
- * Quando alguém atualiza de outro dispositivo, sincroniza aqui
+ * Quando alguÃ©m atualiza de outro dispositivo, sincroniza aqui
  */
 export function setupRealtimeListeners(userId, onProductsChange) {
   if (!userId) return null;
 
-  // Escutar mudanças em produtos
+  // Escutar mudanÃ§as em produtos
   const productsSubscription = supabase
     .channel(`products:user_id=eq.${userId}`)
     .on(
@@ -213,7 +213,7 @@ export function setupRealtimeListeners(userId, onProductsChange) {
         filter: `user_id=eq.${userId}`,
       },
       (payload) => {
-        console.log('🔔 Mudança em produtos detectada:', payload);
+        console.log('ðŸ”” MudanÃ§a em produtos detectada:', payload);
         // Disparar evento para atualizar UI
         if (onProductsChange) onProductsChange(payload);
         window.dispatchEvent(new CustomEvent('products-updated-remote', { detail: payload }));
@@ -225,7 +225,7 @@ export function setupRealtimeListeners(userId, onProductsChange) {
 }
 
 /**
- * Sincronizar dados do usuário (avatar, nome, etc)
+ * Sincronizar dados do usuÃ¡rio (avatar, nome, etc)
  */
 export async function syncUserToSupabase(userId, userData) {
   if (!userId || !userData) return false;
@@ -242,20 +242,20 @@ export async function syncUserToSupabase(userId, userData) {
       }, { onConflict: 'id' });
 
     if (error) {
-      console.warn('⚠️ Erro ao sincronizar usuário:', error);
+      console.warn('âš ï¸ Erro ao sincronizar usuÃ¡rio:', error);
       return false;
     }
 
-    console.log('✅ Usuário sincronizado com Supabase');
+    console.log('âœ… UsuÃ¡rio sincronizado com Supabase');
     return true;
   } catch (err) {
-    console.error('❌ Erro ao sincronizar usuário:', err);
+    console.error('âŒ Erro ao sincronizar usuÃ¡rio:', err);
     return false;
   }
 }
 
 /**
- * Carregar dados do usuário
+ * Carregar dados do usuÃ¡rio
  */
 export async function loadUserFromSupabase(userId) {
   if (!userId) return null;
@@ -268,22 +268,22 @@ export async function loadUserFromSupabase(userId) {
       .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
-      console.warn('⚠️ Erro ao carregar usuário:', error);
+      console.warn('âš ï¸ Erro ao carregar usuÃ¡rio:', error);
       return null;
     }
 
     return data || null;
   } catch (err) {
-    console.error('❌ Erro ao carregar usuário:', err);
+    console.error('âŒ Erro ao carregar usuÃ¡rio:', err);
     return null;
   }
 }
 
 /**
- * Forçar sincronização completa (útil no login)
+ * ForÃ§ar sincronizaÃ§Ã£o completa (Ãºtil no login)
  */
 export async function fullSync(userId, products, sales) {
-  console.log('🔄 Iniciando sincronização completa...');
+  console.log('ðŸ”„ Iniciando sincronizaÃ§Ã£o completa...');
   
   const syncProducts = await syncProductsToSupabase(products, userId);
   
@@ -295,6 +295,7 @@ export async function fullSync(userId, products, sales) {
     }
   }
 
-  console.log(`✅ Sincronização completa: Produtos=${syncProducts}, Vendas=${syncSales}`);
+  console.log(`âœ… SincronizaÃ§Ã£o completa: Produtos=${syncProducts}, Vendas=${syncSales}`);
   return syncProducts && syncSales;
 }
+

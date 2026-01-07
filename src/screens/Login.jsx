@@ -1,9 +1,9 @@
-﻿import { useState } from "react";
-import { useAuth } from "../auth/AuthContext"; // ✅ MUDOU AQUI! (não services/auth/)
+import { useState } from "react";
+import { useAuth } from "../auth/AuthContext"; // ? MUDOU AQUI! (n�o services/auth/)
 import { useNavigate } from "react-router-dom";
 
 export default function Login(){
-  const { login } = useAuth(); // ✅ MUDOU: de 'signIn' para 'login' (conforme AuthContext)
+  const { login } = useAuth(); // ? MUDOU: de 'signIn' para 'login' (conforme AuthContext)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,7 +13,7 @@ export default function Login(){
     e.preventDefault();
     setLoading(true);
     try {
-      await login(email, password); // ✅ MUDOU: de 'signIn' para 'login'
+      await login(email, password); // ? MUDOU: de 'signIn' para 'login'
       nav("/");
     } catch (err) {
       alert(err.message || "Erro ao entrar");
@@ -33,7 +33,7 @@ export default function Login(){
         <div style={{display:"flex", justifyContent:"space-between", marginTop:12}}>
           <button className="button btn-primary" disabled={loading}>{loading ? "Entrando..." : "Entrar"}</button>
         </div>
-        <p className="small" style={{marginTop:12}}>Conta apenas por convite. Peça ao administrador.</p>
+        <p className="small" style={{marginTop:12}}>Conta apenas por convite. Pe�a ao administrador.</p>
       </form>
     </div>
   )

@@ -1,15 +1,15 @@
-// src/hooks/useSupabaseData.js - VERSÃO CORRIGIDA
+﻿// src/hooks/useSupabaseData.js - VERSÃƒO CORRIGIDA
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { supabase } from '../lib/supabase'; // ✅ Importa diretamente da instância única
+import { supabase } from '../lib/supabase.ts'; // âœ… Importa diretamente da instÃ¢ncia Ãºnica
 
 export function useSupabaseData(table, options = {}) {
-  const { user } = useAuth(); // ✅ Apenas user, supabase vem de import direto
+  const { user } = useAuth(); // âœ… Apenas user, supabase vem de import direto
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Função para buscar dados
+  // FunÃ§Ã£o para buscar dados
   const fetchData = async () => {
     if (!user || !supabase) {
       setLoading(false);
@@ -22,7 +22,7 @@ export function useSupabaseData(table, options = {}) {
       
       let query = supabase.from(table).select('*');
       
-      // Filtro automático por usuário (exceto se desativado)
+      // Filtro automÃ¡tico por usuÃ¡rio (exceto se desativado)
       if (options.ignoreUserFilter !== true) {
         query = query.eq('user_id', user.id);
       }
@@ -36,7 +36,7 @@ export function useSupabaseData(table, options = {}) {
         });
       }
       
-      // Ordenação
+      // OrdenaÃ§Ã£o
       if (options.orderBy) {
         query = query.order(options.orderBy.column, {
           ascending: options.orderBy.ascending !== false
@@ -70,9 +70,9 @@ export function useSupabaseData(table, options = {}) {
     }
   }, [user, supabase, JSON.stringify(options.filters)]);
 
-  // Operações CRUD
+  // OperaÃ§Ãµes CRUD
   const create = async (itemData) => {
-    if (!user) throw new Error('Usuário não autenticado');
+    if (!user) throw new Error('UsuÃ¡rio nÃ£o autenticado');
     
     try {
       const itemWithUser = {
@@ -105,7 +105,7 @@ export function useSupabaseData(table, options = {}) {
   };
 
   const update = async (id, updates) => {
-    if (!user) throw new Error('Usuário não autenticado');
+    if (!user) throw new Error('UsuÃ¡rio nÃ£o autenticado');
     
     try {
       const { data: updatedItem, error } = await supabase
@@ -134,7 +134,7 @@ export function useSupabaseData(table, options = {}) {
   };
 
   const remove = async (id) => {
-    if (!user) throw new Error('Usuário não autenticado');
+    if (!user) throw new Error('UsuÃ¡rio nÃ£o autenticado');
     
     try {
       const { error } = await supabase
@@ -162,20 +162,20 @@ export function useSupabaseData(table, options = {}) {
     update,
     remove,
     refetch: fetchData,
-    setData // Para atualizações manuais
+    setData // Para atualizaÃ§Ãµes manuais
   };
 }
 
-// Hook específico para produtos
+// Hook especÃ­fico para produtos
 export function useProdutos(options = {}) {
   const { data: produtos, loading, error, create, update, remove, refetch, setData } = 
     useSupabaseData('produtos', options);
   
-  // Buscar produto por código
+  // Buscar produto por cÃ³digo
   const buscarPorCodigo = async (codigo) => {
     if (!codigo) return null;
     
-    const { data, error } = await supabase // ✅ Agora supabase está definido
+    const { data, error } = await supabase // âœ… Agora supabase estÃ¡ definido
       .from('produtos')
       .select('*')
       .eq('codigo_barras', codigo)
@@ -188,7 +188,7 @@ export function useProdutos(options = {}) {
   // Ajustar estoque
   const ajustarEstoque = async (produtoId, quantidade, motivo = '') => {
     const produto = produtos.find(p => p.id === produtoId);
-    if (!produto) throw new Error('Produto não encontrado');
+    if (!produto) throw new Error('Produto nÃ£o encontrado');
     
     const novaQuantidade = (produto.quantidade || 0) + quantidade;
     
@@ -212,12 +212,12 @@ export function useProdutos(options = {}) {
   };
 }
 
-// Hook específico para vendas
+// Hook especÃ­fico para vendas
 export function useVendas(options = {}) {
   return useSupabaseData('vendas', options);
 }
 
-// Hook específico para clientes
+// Hook especÃ­fico para clientes
 export function useClientes(options = {}) {
   return useSupabaseData('clientes', options);
 }

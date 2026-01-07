@@ -1,5 +1,5 @@
-// CORRIGIDO: Importa da instância única
-import { supabase } from '../lib/supabase'; // ✅ MUDOU AQUI!
+﻿// CORRIGIDO: Importa da instÃ¢ncia Ãºnica
+import { supabase } from '../lib/supabase.ts'; // âœ… MUDOU AQUI!
 
 export const supabaseStockService = {
   async checkConnection() {
