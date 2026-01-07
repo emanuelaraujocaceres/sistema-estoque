@@ -1,79 +1,51 @@
-﻿// src/utils/clean-logs.js - VERSÃO AGGRESSIVA
-// Remove TODOS os logs exceto erros críticos
+﻿// src/utils/clean-logs.js - MODO SUPER SILENCIOSO
+// Mostra APENAS o absolutamente necessário
 
 if (typeof window !== 'undefined') {
   const originalConsole = { ...console };
   
-  // Lista de logs permitidos (apenas estes serão mostrados)
-  const allowedPatterns = [
-    'ERROR',
-    'Error',
-    'error',
-    'FAILED',
-    'Failed',
-    'failed',
-    'Exception',
-    'exception',
-    'Cannot',
+  // APENAS ESTES LOGS SERÃO MOSTRADOS
+  const showOnlyThese = [
+    '[ERRO]',
+    '[ERROR]',
+    '❌',
     'Uncaught',
-    'SyntaxError',
-    'TypeError',
-    'ReferenceError'
+    'Error:',
+    'Failed to',
+    'Cannot',
+    'Sistema pronto',
+    'Aplicação carregada'
   ];
   
-  // Verificar se deve mostrar o log
-  const shouldShowLog = (args) => {
-    const firstArg = args[0] || '';
-    const message = String(firstArg);
+  const shouldShow = (args) => {
+    if (!args.length) return false;
     
-    // Mostrar se contém padrão de erro
-    if (allowedPatterns.some(pattern => message.includes(pattern))) {
-      return true;
-    }
+    const message = String(args[0]);
     
-    // Mostrar logs que começam com [ERRO] ou [ERROR]
-    if (message.startsWith('[ERRO') || message.startsWith('[ERROR')) {
-      return true;
-    }
-    
-    // Mostrar logs de inicialização importantes
-    const importantLogs = [
-      '[Main] Inicializando',
-      '✅',
-      '❌',
-      '⚠️',
-      'Sistema pronto',
-      'Aplicação carregada'
-    ];
-    
-    if (importantLogs.some(pattern => message.includes(pattern))) {
-      return true;
-    }
-    
-    return false;
+    // Mostrar apenas se estiver na lista branca
+    return showOnlyThese.some(pattern => message.includes(pattern));
   };
   
-  // Substituir funções do console
-  console.log = function(...args) {
-    if (shouldShowLog(args)) {
-      originalConsole.log.apply(console, args);
+  // Substituir TODAS as funções do console
+  const functions = ['log', 'info', 'warn', 'debug', 'dir', 'table', 'trace'];
+  
+  functions.forEach(func => {
+    if (console[func]) {
+      console[func] = function(...args) {
+        if (shouldShow(args)) {
+          originalConsole[func].apply(console, args);
+        }
+      };
+    }
+  });
+  
+  // Manter error original (mas filtrar também)
+  console.error = function(...args) {
+    if (shouldShow(args)) {
+      originalConsole.error.apply(console, args);
     }
   };
   
-  console.info = function(...args) {
-    if (shouldShowLog(args)) {
-      originalConsole.info.apply(console, args);
-    }
-  };
-  
-  console.warn = function(...args) {
-    if (shouldShowLog(args)) {
-      originalConsole.warn.apply(console, args);
-    }
-  };
-  
-  // Sempre mostrar erros
-  console.error = originalConsole.error;
-  
-  console.log('[Clean Logs] Modo silencioso ativado - apenas erros e mensagens críticas');
+  // UM ÚNICO LOG para confirmar que está funcionando
+  originalConsole.log('[Clean Logs] Modo super silencioso: apenas erros críticos visíveis');
 }
