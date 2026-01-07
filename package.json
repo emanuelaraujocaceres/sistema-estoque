@@ -1,58 +1,60 @@
-{
-  "name": "aplicativo",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "test": "vitest",
-    "start": "vite"
-  },
-  "dependencies": {
-    "@ai-sdk/openai": "^2.0.80",
-    "@supabase/supabase-js": "^2.87.0",
-    "ai": "^5.0.108",
-    "html2pdf.js": "^0.12.1",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-router-dom": "^7.10.1",
-    "uuid": "^13.0.0",
-    "vite-plugin-pwa": "^1.2.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/react": "^19.2.5",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "jsdom": "^27.3.0",
-    "typescript": "^5.9.3",
-    "vite": "npm:rolldown-vite@7.2.5",
-    "vitest": "^4.0.15"
-  },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.2.5"
-  },
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
-  "main": "eslint.config.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/emanuelaraujocaceres/sistema-estoque.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/emanuelaraujocaceres/sistema-estoque/issues"
-  },
-  "homepage": "https://github.com/emanuelaraujocaceres/sistema-estoque#readme"
+﻿{
+    "name":  "aplicativo",
+    "private":  true,
+    "version":  "0.0.0",
+    "type":  "module",
+    "scripts":  {
+                    "dev":  "vite",
+                    "build":  "vite build",
+                    "lint":  "eslint .",
+                    "preview":  "vite preview",
+                    "test":  "vitest",
+                    "start":  "vite"
+                },
+    "dependencies":  {
+                         "@ai-sdk/openai":  "^2.0.80",
+                         "@supabase/supabase-js":  "^2.87.0",
+                         "ai":  "^5.0.108",
+                         "html2pdf.js":  "^0.12.1",
+                         "react":  "^19.2.0",
+                         "react-dom":  "^19.2.0",
+                         "react-router-dom":  "^7.10.1",
+                         "uuid":  "^13.0.0",
+                         "vite-plugin-pwa":  "^1.2.0"
+                     },
+    "devDependencies":  {
+                            "@eslint/js":  "^9.39.1",
+                            "@testing-library/jest-dom":  "^6.9.1",
+                            "@testing-library/react":  "^16.3.0",
+                            "@testing-library/user-event":  "^14.6.1",
+                            "@types/react":  "^19.2.5",
+                            "@types/react-dom":  "^19.2.3",
+                            "@vitejs/plugin-react":  "^5.1.1",
+                            "eslint":  "^9.39.1",
+                            "eslint-plugin-react-hooks":  "^7.0.1",
+                            "eslint-plugin-react-refresh":  "^0.4.24",
+                            "globals":  "^16.5.0",
+                            "jsdom":  "^27.3.0",
+                            "typescript":  "^5.9.3",
+                            "vite":  "^5.0.0",
+                            "vitest":  "^4.0.15"
+                        },
+    "overrides":  {
+
+                  },
+    "description":  "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+    "main":  "eslint.config.js",
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/emanuelaraujocaceres/sistema-estoque.git"
+                   },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "bugs":  {
+                 "url":  "https://github.com/emanuelaraujocaceres/sistema-estoque/issues"
+             },
+    "homepage":  "https://github.com/emanuelaraujocaceres/sistema-estoque#readme"
 }
