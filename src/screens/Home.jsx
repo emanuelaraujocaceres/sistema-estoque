@@ -21,6 +21,13 @@ export default function Home() {
   const [loadingPassword, setLoadingPassword] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraError, setCameraError] = useState(null);
+  const [cameraInitializing, setCameraInitializing] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
   const [avatarUrl, setAvatarUrl] = useState(() => {
     const savedAvatar = localStorage.getItem('user_avatar');
     return savedAvatar || user?.user_metadata?.avatar || null;
@@ -490,6 +497,14 @@ export default function Home() {
     <div className="home-container">
       <h1>Bem-vindo, {name}</h1>
       <button onClick={updateName} disabled={loadingName}>Atualizar Nome</button>
+      <button onClick={openCameraModal}>Abrir Câmera</button>
+      {showCameraModal && (
+        <div className="camera-modal">
+          <video ref={videoRef} autoPlay playsInline />
+          <canvas ref={canvasRef} style={{ display: "none" }} />
+          <button onClick={closeCameraModal}>Fechar Câmera</button>
+        </div>
+      )}
     </div>
   );
 }
