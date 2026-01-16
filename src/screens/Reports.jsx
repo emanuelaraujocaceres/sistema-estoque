@@ -44,7 +44,7 @@ function Reports() {
 
       const withdrawalsAsSales = withdrawalsData.map(withdrawal => ({
         id: `withdrawal_${withdrawal.date}`,
-        created_at: withdrawal.date,
+        criado_em: withdrawal.date,
         total: -withdrawal.amount,
         paymentMethod: "retirada",
         items: [],

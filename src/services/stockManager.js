@@ -74,7 +74,7 @@ class StockManager {
     this.products[productIndex] = {
       ...this.products[productIndex],
       stock: newStock,
-      updated_at: new Date().toISOString(),
+      atualizado_em: new Date().toISOString(),
       last_update: Date.now(),
     };
 

@@ -56,11 +56,11 @@ export async function syncProductsToSupabase(products, userId) {
       localizacao: p.localizacao || '',
       imagem_url: p.imagem_url || '',
       ativo: p.ativo !== false,
-      criado_em: p.created_at || new Date().toISOString(),
+      criado_em: p.criado_em || new Date().toISOString(),
       atualizado_em: new Date().toISOString(),
     }));
 
-    console.log('ðŸ“ [supabaseSync] Primeiro produto formatado:', productsToSync[0]);
+    console.log('🛠️ [supabaseSync] Primeiro produto formatado:', productsToSync[0]);
 
     // Usar upsert para criar ou atualizar
     const { data, error } = await supabase
