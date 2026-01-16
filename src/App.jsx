@@ -39,7 +39,7 @@ function AppContent() {
     <ProductsProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to={user ? "/home" : "/login"} />} />
+          <Route path="/" element={<Navigate to={user ? "/home" : "/login"} replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
