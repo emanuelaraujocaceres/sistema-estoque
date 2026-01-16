@@ -20,8 +20,12 @@ export default function Products() {
         if (!sessionData.session) throw new Error("Sessão expirada. Faça login novamente.");
 
         // Realizar a requisição
-        const { data, error } = await supabase.from("products").select("*");
-        if (error) throw error;
+        const { data, error } = await supabase.from("produtos").select("*").order("criado_em", { ascending: true });
+        if (error) {
+          console.error("Erro ao buscar produtos:", error);
+          setList([]);
+          return;
+        }
 
         setList(data);
       } catch (error) {

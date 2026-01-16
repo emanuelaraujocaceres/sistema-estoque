@@ -22,7 +22,14 @@ export function useRealtime(table, options = {}) {
         // Carregar dados iniciais
         if (options.fetchInitial) {
           setLoading(true);
-          let query = supabase.from(table).select('*');
+          let query;
+          if (table === 'produtos') {
+            query = supabase.from('produtos').select('*');
+          } else {
+            console.error(`Tabela inválida: ${table}`);
+            setLoading(false);
+            return;
+          }
           
           if (options.filter) {
             Object.keys(options.filter).forEach(key => {

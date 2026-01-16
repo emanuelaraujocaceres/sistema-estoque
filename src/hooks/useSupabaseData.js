@@ -21,7 +21,15 @@ export function useSupabaseData(table, options = {}) {
       setLoading(true);
       setError(null);
 
-      let query = supabase.from(table).select('*');
+      let query;
+      if (table === 'produtos') {
+        query = supabase.from('produtos').select('*');
+      } else {
+        console.error(`Tabela inválida: ${table}`);
+        setError('Tabela inválida.');
+        setLoading(false);
+        return;
+      }
 
       // Filtro automático por usuário (exceto se desativado)
       if (options.ignoreUserFilter !== true) {

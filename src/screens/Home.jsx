@@ -60,6 +60,10 @@ export default function Home() {
     setLoadingName(true);
     try {
       const { error } = await supabase.from('profiles').update({ name }).eq('id', user.id);
+      if (error && error.code === '404') {
+        console.error('Tabela profiles não encontrada. Operação ignorada.');
+        return;
+      }
       if (error) throw error;
       refreshUser();
     } catch (error) {

@@ -25,9 +25,12 @@ export function useBroadcast() {
       channel.on('broadcast', { event: 'sync' }, ({ payload }) => {
         console.log('📨 Mensagem recebida:', payload);
         setMessages(prev => [...prev, payload]);
-        
-        // Executar ações baseadas no tipo
-        handleIncomingMessage(payload);
+
+        try {
+          handleIncomingMessage(payload);
+        } catch (error) {
+          console.error('❌ Erro ao processar mensagem:', error);
+        }
       });
 
       // Monitorar status da conexão
