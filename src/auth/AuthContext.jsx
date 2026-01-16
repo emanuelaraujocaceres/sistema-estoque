@@ -8,10 +8,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[AuthContext] Inicializando com supabase singleton');
-    console.log('Instância ID:', supabase?.supabaseUrl?.substring(0, 30) || 'N/A');
-
-    // Buscar sessão atual
     supabase.auth.getSession().then(({ data }) => {
       if (data?.session?.user) {
         setUser(data.session.user);
@@ -19,15 +15,11 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    // Listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
       } else {
         setUser(null);
-        localStorage.removeItem('products_app_data');
-        localStorage.removeItem('sales_app_data');
-        localStorage.removeItem('user_avatar');
       }
       setLoading(false);
     });

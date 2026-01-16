@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
@@ -247,19 +247,19 @@ export default function Home() {
 
       try {
         stream = await navigator.mediaDevices.getUserMedia({ ...baseConstraints, video: { ...baseConstraints.video, facingMode: 'environment' } });
-        console.log('? Câmera traseira acessada com sucesso');
+        console.log("? Câmera traseira acessada com sucesso");
       } catch (rearErr) {
-        console.log('?? Falha ao acessar câmera traseira, tentando frontal...', rearErr);
+        console.log("?? Falha ao acessar câmera traseira, tentando frontal...", rearErr);
         try {
           stream = await navigator.mediaDevices.getUserMedia({ ...baseConstraints, video: { ...baseConstraints.video, facingMode: 'user' } });
-          console.log('? Câmera frontal acessada com sucesso');
+          console.log("? Câmera frontal acessada com sucesso");
         } catch (frontErr) {
-          console.log('?? Falha ao acessar com facingMode, tentando sem facingMode...', frontErr);
+          console.log("?? Falha ao acessar com facingMode, tentando sem facingMode...", frontErr);
           try {
             stream = await navigator.mediaDevices.getUserMedia(baseConstraints);
-            console.log('? Câmera acessada sem facingMode');
+            console.log("? Câmera acessada sem facingMode");
           } catch (err) {
-            console.error('? Todas as tentativas de acessar câmera falharam:', err);
+            console.error("? Todas as tentativas de acessar câmera falharam:", err);
             throw err;
           }
         }
@@ -277,10 +277,10 @@ export default function Home() {
 
       setCameraInitializing(false);
     } catch (err) {
-      console.error('? Erro ao acessar câmera:', err);
+      console.error("? Erro ao acessar câmera:", err);
       setCameraInitializing(false);
 
-      let errorMessage = 'Não foi possível acessar a câmera.';
+      let errorMessage = "Não foi possível acessar a câmera.";
 
       if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
         errorMessage = '?? Permissão de câmera negada.\n\nPara permitir o acesso:\n1. Clique no ícone de cadeado na barra de endereços\n2. Procure por "Câmera" nas permissões\n3. Altere para "Permitir"\n4. Recarregue a página e tente novamente';
@@ -446,4 +446,50 @@ export default function Home() {
       alert("? E-mail atualizado!\n\nVerifique sua caixa de entrada (e spam) para confirmar o novo e-mail.\n\nApós a confirmação, você precisará fazer login novamente.");
       setEditingEmail(false);
       // Atualiza o contexto do usuário localmente (fire-and-forget)
-      if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuá
+      if (refreshUser) refreshUser().catch(err => console.error('Erro ao atualizar usuário (email):', err));
+    } catch (err) {
+      console.error("Erro ao atualizar e-mail:", err);
+      alert(`? Erro ao atualizar e-mail: ${err.message || "Erro desconhecido"}\n\nVerifique sua conexão e tente novamente.`);
+    } finally {
+      setLoadingEmail(false);
+    }
+  }
+
+  async function savePassword(e) {
+    e?.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      alert("A nova senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      alert("As senhas não coincidem. Tente novamente.");
+      return;
+    }
+    
+    setLoadingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
+      if (error) throw error;
+      
+      alert("? Senha atualizada com sucesso!\n\nVocê precisará fazer login novamente com a nova senha.");
+      setEditingPassword(false);
+      // Forçar logout para reautenticar com a nova senha
+      await supabase.auth.signOut();
+      navigate("/login");
+    } catch (err) {
+      console.error("Erro ao atualizar senha:", err);
+      alert(`? Erro ao atualizar senha: ${err.message || "Erro desconhecido"}\n\nVerifique sua conexão e tente novamente.`);
+    } finally {
+      setLoadingPassword(false);
+    }
+  }
+
+  return (
+    <div className="home-container">
+      <h1>Bem-vindo, {name}</h1>
+      <button onClick={updateName} disabled={loadingName}>Atualizar Nome</button>
+    </div>
+  );
+}

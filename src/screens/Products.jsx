@@ -1,33 +1,11 @@
-﻿import { useEffect, useState, useRef } from "react";
+﻿import { useEffect, useState } from "react";
 import { useProducts } from "../context/ProductsContext";
 import "./Products.css";
 
-function emptyForm() { 
-  return { 
-    id: null, 
-    name: "", 
-    cost: "", 
-    price: "", 
-    stock: "", 
-    min_stock: "",
-    sku: "",
-    category: "",
-    image: "",
-    saleType: "unit",
-    pricePerKilo: ""
-  }; 
-}
-
 export default function Products() {
   const [list, setList] = useState([]);
-  const { products: ctxProducts, syncWithStorage } = useProducts();
-  const [form, setForm] = useState(emptyForm());
-  const [editing, setEditing] = useState(false);
+  const { products: ctxProducts } = useProducts();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("name");
-  const [sortOrder, setSortOrder] = useState("asc");
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -46,31 +24,10 @@ export default function Products() {
     fetchProducts();
   }, []);
 
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      if (editing) {
-        const { error } = await supabase.from('products').update(form).eq('id', form.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('products').insert(form);
-        if (error) throw error;
-      }
-      setForm(emptyForm());
-      setEditing(false);
-      const { data } = await supabase.from('products').select('*');
-      setList(data);
-    } catch (error) {
-      console.error("Erro ao salvar produto:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="products-container">
-      <h1>Gerenciar Produtos</h1>
-      {/* Restante do código da interface */}
+      <h1>Produtos</h1>
+      {loading ? <p>Carregando...</p> : <ul>{list.map(product => <li key={product.id}>{product.name}</li>)}</ul>}
     </div>
   );
 }

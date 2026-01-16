@@ -1,7 +1,7 @@
 ﻿// useStock.js - Hook para estoque com PERSISTÊNCIA SUPABASE
 import { useState, useEffect, useCallback } from 'react';
 import { useProducts } from '../context/ProductsContext';
-import { supabaseStockService } from '../services/supabaseStock'; // CORREÇÃO AQUI!
+import { supabaseStockService } from '../services/supabaseStock';
 
 export const useStock = () => {
   const { products: originalProducts, updateStock: updateContextStock } = useProducts();

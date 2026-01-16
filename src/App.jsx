@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import Home from "./screens/Home";
 import Products from "./screens/Products";
@@ -9,33 +9,22 @@ import Login from "./screens/Login";
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ProductsProvider } from "./context/ProductsContext";
 import ProtectedRoute from "./components/ProtectedRoute";
-import { AppStatus } from './components/AppStatus';
-import { initDefaultProducts } from "./services/storage";
 import "./App.css";
 
 function AppContent() {
   const { user, loading } = useAuth();
   const [productsInitialized, setProductsInitialized] = React.useState(false);
 
-  // Inicializar produtos padrão apenas uma vez
   useEffect(() => {
     if (!productsInitialized) {
       try {
-        initDefaultProducts();
+        console.log("Inicializando produtos padrão...");
         setProductsInitialized(true);
       } catch (error) {
         console.error("Erro ao inicializar produtos:", error);
       }
     }
   }, [productsInitialized]);
-
-  // Log quando a aplicação terminar de carregar
-  useEffect(() => {
-    if (!loading) {
-      console.log('✅ Aplicação carregada com sucesso!');
-      console.log('Usuário:', user ? 'Autenticado' : 'Não autenticado (normal para login)');
-    }
-  }, [loading, user]);
 
   if (loading) {
     return (
@@ -49,89 +38,24 @@ function AppContent() {
   return (
     <ProductsProvider>
       <BrowserRouter>
-        <div className="app">
-          {/* Header - só mostra se estiver logado */}
-          {user && (
-            <header className="header">
-              <div className="header-container">
-                <div className="header-left">
-                  <h1>Sistema Estoque & Caixa</h1>
-                </div>
-                <div className="header-right">
-                  <span className="user-info">
-                    <i className="fas fa-user"></i>
-                    {user.email}
-                  </span>
-                </div>
-              </div>
-              
-              <nav className="nav">
-                <Link to="/" className="nav-link">
-                  <i className="fas fa-home"></i> Home
-                </Link>
-                <Link to="/products" className="nav-link">
-                  <i className="fas fa-box"></i> Produtos
-                </Link>
-                <Link to="/sales" className="nav-link">
-                  <i className="fas fa-shopping-cart"></i> Vendas
-                </Link>
-                <Link to="/reports" className="nav-link">
-                  <i className="fas fa-chart-bar"></i> Relatórios
-                </Link>
-              </nav>
-            </header>
-          )}
-
-          <main className="main-content">
-            <Routes>
-              <Route path="/login" element={
-                user ? <Navigate to="/" /> : <Login />
-              } />
-              
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/products" element={
-                <ProtectedRoute>
-                  <Products />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/sales" element={
-                <ProtectedRoute>
-                  <Sales />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/reports" element={
-                <ProtectedRoute>
-                  <Reports />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="*" element={
-                <Navigate to={user ? "/" : "/login"} />
-              } />
-            </Routes>
-          </main>
-          
-          <AppStatus />
-        </div>
+        <Routes>
+          <Route path="/" element={<Navigate to={user ? "/home" : "/login"} />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+          <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+        </Routes>
       </BrowserRouter>
     </ProductsProvider>
   );
 }
 
-function App() {
+export default function App() {
   return (
     <AuthProvider>
       <AppContent />
     </AuthProvider>
   );
 }
-
-export default App;
 

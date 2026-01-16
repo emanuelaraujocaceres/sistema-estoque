@@ -12,7 +12,7 @@ export function useRealtime(table, options = {}) {
     if (!user || !supabase) return;
 
     let channel;
-    
+
     const setupRealtime = async () => {
       try {
         // Carregar dados iniciais
@@ -50,37 +50,17 @@ export function useRealtime(table, options = {}) {
               filter: options.filter ? 
                 Object.entries(options.filter)
                   .map(([key, value]) => `${key}=eq.${value}`)
-                  .join('&') : undefined
+                  .join(',') : undefined
             },
             (payload) => {
-              if (options.onChange) {
-                options.onChange(payload, setData);
-              } else {
-                // Atualização padrão
-                if (payload.eventType === 'INSERT') {
-                  setData(prev => [...prev, payload.new]);
-                } else if (payload.eventType === 'UPDATE') {
-                  setData(prev => 
-                    prev.map(item => 
-                      item.id === payload.new.id ? payload.new : item
-                    )
-                  );
-                } else if (payload.eventType === 'DELETE') {
-                  setData(prev => 
-                    prev.filter(item => item.id !== payload.old.id)
-                  );
-                }
-              }
+              console.log('🔄 Evento recebido:', payload);
+              setData(prev => [...prev, payload.new]);
             }
-          )
-          .subscribe((status) => {
-            if (status === 'SUBSCRIBED') {
-              console.log(`✅ Conectado ao canal ${table} em tempo real`);
-            }
-          });
-          
+          );
+
+        await channel.subscribe();
       } catch (err) {
-        console.error('Erro no tempo real:', err);
+        console.error('❌ Erro no setupRealtime:', err);
         setError(err);
       } finally {
         setLoading(false);
@@ -91,12 +71,13 @@ export function useRealtime(table, options = {}) {
 
     return () => {
       if (channel) {
-        supabase.removeChannel(channel);
+        console.log('🔌 Desconectando do canal realtime...');
+        channel.unsubscribe();
       }
     };
-  }, [user, supabase, table, JSON.stringify(options)]);
+  }, [user, supabase, table, options]);
 
-  return { data, loading, error, setData };
+  return { data, loading, error };
 }
 
 // Hook para broadcast entre dispositivos

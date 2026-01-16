@@ -52,13 +52,13 @@ export function useBroadcast() {
 
     // Limpar quando desmontar
     return () => {
-      console.log('🔴 Desconectando do broadcast...');
-      supabase.removeChannel(channel);
+      console.log('🔌 Desconectando do canal de broadcast...');
+      channel.unsubscribe();
     };
   }, [user, supabase]);
 
   // Função para lidar com mensagens recebidas
-  const handleIncomingMessage = (payload) => {
+  const handleIncomingMessage = useCallback((payload) => {
     console.log('🔄 Processando mensagem:', payload.type);
     
     switch (payload.type) {
@@ -99,7 +99,7 @@ export function useBroadcast() {
       default:
         console.log('📨 Mensagem não reconhecida:', payload.type);
     }
-  };
+  }, [supabase]);
 
   // Função para mostrar notificações
   const showNotification = (message) => {
