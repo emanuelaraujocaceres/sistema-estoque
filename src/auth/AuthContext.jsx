@@ -8,9 +8,29 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    console.log("AuthContext mounted");
+  }, []);
+
+  useEffect(() => {
+    console.log("User state updated in AuthContext:", user);
+    console.log("Loading state updated in AuthContext:", loading);
+  }, [user, loading]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error("Erro ao obter sessão do Supabase:", error);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       if (data?.session?.user) {
+        console.log("Sessão carregada:", data.session.user);
         setUser(data.session.user);
+      } else {
+        console.warn("Nenhuma sessão encontrada");
+        setUser(null);
       }
       setLoading(false);
     });

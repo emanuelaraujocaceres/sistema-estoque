@@ -8,7 +8,7 @@ export default function Home() {
   const navigate = useNavigate();
   
   const [editingName, setEditingName] = useState(false);
-  const [name, setName] = useState(user?.user_metadata?.name || "");
+  const [name, setName] = useState(user?.user_metadata?.name || "Usuário");
   const [loadingName, setLoadingName] = useState(false);
   
   const [editingEmail, setEditingEmail] = useState(false);
@@ -496,6 +496,16 @@ export default function Home() {
       setLoadingPassword(false);
     }
   }
+
+  useEffect(() => {
+    console.log("Home component mounted");
+    console.log("User state:", user);
+  }, []);
+
+  useEffect(() => {
+    console.log("User updated:", user);
+    console.log("User metadata:", user?.user_metadata);
+  }, [user]);
 
   return (
     <div className="home-container">
