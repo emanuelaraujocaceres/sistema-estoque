@@ -91,7 +91,7 @@ export async function loadProductsFromSupabase(userId) {
       .from(PRODUCTS_TABLE)
       .select('*')
       .eq('user_id', userId)
-      .order('created_at', { ascending: true });
+      .order('criado_em', { ascending: true });
 
     if (error) {
       console.warn('âš ï¸ Erro ao carregar produtos do Supabase:', error);
