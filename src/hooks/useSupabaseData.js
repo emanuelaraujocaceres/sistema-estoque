@@ -77,34 +77,47 @@ export function useSupabaseData(table, options = {}) {
 export function useProdutos(options = {}) {
   const { data: produtos, loading, error, refetch, setData } = 
     useSupabaseData('produtos', options);
-  
+
   // Buscar produto por código
   const buscarPorCodigo = async (codigo) => {
     if (!codigo) return null;
-    
-    const { data, error } = await supabase // âœ… Agora supabase está definido
-      .from('produtos')
-      .select('*')
-      .eq('codigo_barras', codigo)
-      .single();
-    
-    if (error) return null;
-    return data;
+
+    try {
+      const { data, error } = await supabase
+        .from('produtos')
+        .select('*')
+        .eq('codigo_barras', codigo)
+        .single();
+
+      if (error) {
+        console.error('❌ Erro ao buscar produto por código:', error);
+        return null;
+      }
+      return data;
+    } catch (error) {
+      console.error('❌ Erro inesperado ao buscar produto por código:', error);
+      return null;
+    }
   };
-  
+
   // Ajustar estoque
   const ajustarEstoque = async (produtoId, quantidade, motivo = '') => {
-    const produto = produtos.find(p => p.id === produtoId);
-    if (!produto) throw new Error('Produto não encontrado');
-    
-    const novaQuantidade = (produto.quantidade || 0) + quantidade;
-    
-    return await update(produtoId, {
-      quantidade: novaQuantidade,
-      ...(motivo && { ultimo_ajuste: motivo })
-    });
+    try {
+      const produto = produtos.find(p => p.id === produtoId);
+      if (!produto) throw new Error('Produto não encontrado');
+
+      const novaQuantidade = (produto.quantidade || 0) + quantidade;
+
+      return await update(produtoId, {
+        quantidade: novaQuantidade,
+        ...(motivo && { ultimo_ajuste: motivo })
+      });
+    } catch (error) {
+      console.error('❌ Erro ao ajustar estoque:', error);
+      throw error;
+    }
   };
-  
+
   return {
     produtos,
     loading,
