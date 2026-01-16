@@ -13,18 +13,6 @@ import "./App.css";
 
 function AppContent() {
   const { user, loading } = useAuth();
-  const [productsInitialized, setProductsInitialized] = React.useState(false);
-
-  useEffect(() => {
-    if (!productsInitialized) {
-      try {
-        console.log("Inicializando produtos padrão...");
-        setProductsInitialized(true);
-      } catch (error) {
-        console.error("Erro ao inicializar produtos:", error);
-      }
-    }
-  }, [productsInitialized]);
 
   if (loading) {
     return (
