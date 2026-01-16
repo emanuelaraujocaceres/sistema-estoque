@@ -1,32 +1,32 @@
-﻿// src/hooks/useSupabaseData.js - VERSÃƒO CORRIGIDA
+﻿// src/hooks/useSupabaseData.js
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { supabase } from '../lib/supabase.ts'; // âœ… Importa diretamente da instÃ¢ncia Ãºnica
+import { supabase } from '../lib/supabase.ts';
 
 export function useSupabaseData(table, options = {}) {
-  const { user } = useAuth(); // âœ… Apenas user, supabase vem de import direto
+  const { user } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // FunÃ§Ã£o para buscar dados
+  // Função para buscar dados
   const fetchData = async () => {
     if (!user || !supabase) {
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       let query = supabase.from(table).select('*');
-      
-      // Filtro automÃ¡tico por usuÃ¡rio (exceto se desativado)
+
+      // Filtro automático por usuário (exceto se desativado)
       if (options.ignoreUserFilter !== true) {
         query = query.eq('user_id', user.id);
       }
-      
+
       // Filtros adicionais
       if (options.filters) {
         Object.entries(options.filters).forEach(([key, value]) => {
@@ -35,25 +35,24 @@ export function useSupabaseData(table, options = {}) {
           }
         });
       }
-      
-      // OrdenaÃ§Ã£o
+
+      // Ordenação
       if (options.orderBy) {
         query = query.order(options.orderBy.column, {
           ascending: options.orderBy.ascending !== false
         });
       }
-      
+
       // Limite
       if (options.limit) {
         query = query.limit(options.limit);
       }
-      
+
       const { data: fetchedData, error: fetchError } = await query;
-      
+
       if (fetchError) throw fetchError;
-      
+
       setData(fetchedData || []);
-      
     } catch (err) {
       console.error(`Erro ao buscar ${table}:`, err);
       setError(err);
@@ -70,112 +69,25 @@ export function useSupabaseData(table, options = {}) {
     }
   }, [user, supabase, JSON.stringify(options.filters)]);
 
-  // OperaÃ§Ãµes CRUD
-  const create = async (itemData) => {
-    if (!user) throw new Error('UsuÃ¡rio nÃ£o autenticado');
-    
-    try {
-      const itemWithUser = {
-        ...itemData,
-        user_id: user.id,
-        atualizado_em: new Date().toISOString()
-      };
-      
-      // Remove id se for enviado (deixa o Supabase gerar)
-      if (itemWithUser.id && itemWithUser.id.startsWith('temp-')) {
-        delete itemWithUser.id;
-      }
-      
-      const { data: newItem, error } = await supabase
-        .from(table)
-        .insert(itemWithUser)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      // Atualizar estado local
-      setData(prev => [...prev, newItem]);
-      return newItem;
-      
-    } catch (err) {
-      console.error(`Erro ao criar em ${table}:`, err);
-      throw err;
-    }
-  };
-
-  const update = async (id, updates) => {
-    if (!user) throw new Error('UsuÃ¡rio nÃ£o autenticado');
-    
-    try {
-      const { data: updatedItem, error } = await supabase
-        .from(table)
-        .update({
-          ...updates,
-          atualizado_em: new Date().toISOString()
-        })
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      // Atualizar estado local
-      setData(prev => prev.map(item => 
-        item.id === id ? updatedItem : item
-      ));
-      return updatedItem;
-      
-    } catch (err) {
-      console.error(`Erro ao atualizar em ${table}:`, err);
-      throw err;
-    }
-  };
-
-  const remove = async (id) => {
-    if (!user) throw new Error('UsuÃ¡rio nÃ£o autenticado');
-    
-    try {
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-      
-      // Atualizar estado local
-      setData(prev => prev.filter(item => item.id !== id));
-      
-    } catch (err) {
-      console.error(`Erro ao excluir de ${table}:`, err);
-      throw err;
-    }
-  };
-
   return {
     data,
     loading,
     error,
-    create,
-    update,
-    remove,
     refetch: fetchData,
-    setData // Para atualizaÃ§Ãµes manuais
+    setData // Para atualizações manuais
   };
 }
 
-// Hook especÃ­fico para produtos
+// Hook específico para produtos
 export function useProdutos(options = {}) {
-  const { data: produtos, loading, error, create, update, remove, refetch, setData } = 
+  const { data: produtos, loading, error, refetch, setData } = 
     useSupabaseData('produtos', options);
   
-  // Buscar produto por cÃ³digo
+  // Buscar produto por código
   const buscarPorCodigo = async (codigo) => {
     if (!codigo) return null;
     
-    const { data, error } = await supabase // âœ… Agora supabase estÃ¡ definido
+    const { data, error } = await supabase // âœ… Agora supabase está definido
       .from('produtos')
       .select('*')
       .eq('codigo_barras', codigo)
@@ -188,7 +100,7 @@ export function useProdutos(options = {}) {
   // Ajustar estoque
   const ajustarEstoque = async (produtoId, quantidade, motivo = '') => {
     const produto = produtos.find(p => p.id === produtoId);
-    if (!produto) throw new Error('Produto nÃ£o encontrado');
+    if (!produto) throw new Error('Produto não encontrado');
     
     const novaQuantidade = (produto.quantidade || 0) + quantidade;
     
@@ -202,9 +114,6 @@ export function useProdutos(options = {}) {
     produtos,
     loading,
     error,
-    create,
-    update,
-    remove,
     refetch,
     setData,
     buscarPorCodigo,
@@ -212,12 +121,12 @@ export function useProdutos(options = {}) {
   };
 }
 
-// Hook especÃ­fico para vendas
+// Hook específico para vendas
 export function useVendas(options = {}) {
   return useSupabaseData('vendas', options);
 }
 
-// Hook especÃ­fico para clientes
+// Hook específico para clientes
 export function useClientes(options = {}) {
   return useSupabaseData('clientes', options);
 }

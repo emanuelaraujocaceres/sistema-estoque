@@ -1,5 +1,5 @@
 ﻿import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from '../lib/supabase.ts'; // ✅ Importa diretamente
+import { supabase } from '../lib/supabase.ts';
 
 const AuthContext = createContext();
 
@@ -8,13 +8,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔧 [AuthContext] Inicializando com supabase singleton')
-    console.log('🔧 Instância ID:', supabase?.supabaseUrl?.substring(0, 30) || 'N/A')
+    console.log('[AuthContext] Inicializando com supabase singleton');
+    console.log('Instância ID:', supabase?.supabaseUrl?.substring(0, 30) || 'N/A');
 
     // Buscar sessão atual
     supabase.auth.getSession().then(({ data }) => {
-      console.log('🔧 [AuthContext] Sessão inicial:', data?.session?.user?.email)
-
       if (data?.session?.user) {
         setUser(data.session.user);
       }
@@ -23,8 +21,6 @@ export function AuthProvider({ children }) {
 
     // Listener para mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('🔧 [AuthContext] Auth state changed:', _event, 'User:', session?.user?.email)
-
       if (session?.user) {
         setUser(session.user);
       } else {
@@ -37,9 +33,8 @@ export function AuthProvider({ children }) {
     });
 
     return () => {
-      console.log('🔧 [AuthContext] Limpando subscription')
-      subscription.unsubscribe()
-    }
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email, password) => {
@@ -50,33 +45,19 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
-  // VALOR DO CONTEXTO - TUDO QUE SERÁ DISPONIBILIZADO
-  const value = {
-    user,
-    loading,
-    login,
-    signOut,
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// HOOK PERSONALIZADO para usar o AuthContext
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 }
 
