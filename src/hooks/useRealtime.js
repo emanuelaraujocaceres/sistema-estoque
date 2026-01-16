@@ -9,7 +9,11 @@ export function useRealtime(table, options = {}) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!user || !supabase) return;
+    if (!user || !supabase) {
+      setError('Usuário ou Supabase não disponível.');
+      setLoading(false);
+      return;
+    }
 
     let channel;
 
@@ -38,30 +42,23 @@ export function useRealtime(table, options = {}) {
           setData(initialData || []);
         }
         
-        // Configurar subscrição em tempo real
-        channel = supabase
-          .channel(`${table}-realtime-${user.id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: options.events || '*',
-              schema: 'public',
-              table: table,
-              filter: options.filter ? 
-                Object.entries(options.filter)
-                  .map(([key, value]) => `${key}=eq.${value}`)
-                  .join(',') : undefined
-            },
-            (payload) => {
-              console.log('🔄 Evento recebido:', payload);
-              setData(prev => [...prev, payload.new]);
-            }
-          );
+        // Configurar canal de tempo real
+        channel = supabase.channel(`realtime-${table}`);
 
-        await channel.subscribe();
-      } catch (err) {
-        console.error('❌ Erro no setupRealtime:', err);
-        setError(err);
+        channel.on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
+          console.log('📡 Atualização em tempo real:', payload);
+          setData(prev => [...prev, payload.new]);
+        });
+
+        channel.subscribe((status) => {
+          console.log('🔌 Status do canal de tempo real:', status);
+          if (status !== 'SUBSCRIBED') {
+            throw new Error('Falha ao conectar ao canal de tempo real.');
+          }
+        });
+      } catch (error) {
+        console.error('❌ Erro ao configurar tempo real:', error);
+        setError(error.message || 'Erro desconhecido');
       } finally {
         setLoading(false);
       }
@@ -71,8 +68,8 @@ export function useRealtime(table, options = {}) {
 
     return () => {
       if (channel) {
-        console.log('🔌 Desconectando do canal realtime...');
         channel.unsubscribe();
+        console.log('🔴 Canal de tempo real desconectado.');
       }
     };
   }, [user, supabase, table, options]);

@@ -12,6 +12,7 @@ export function useSupabaseData(table, options = {}) {
   // Função para buscar dados
   const fetchData = async () => {
     if (!user || !supabase) {
+      setError('Usuário ou Supabase não disponível.');
       setLoading(false);
       return;
     }
@@ -43,20 +44,14 @@ export function useSupabaseData(table, options = {}) {
         });
       }
 
-      // Limite
-      if (options.limit) {
-        query = query.limit(options.limit);
-      }
-
       const { data: fetchedData, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
 
       setData(fetchedData || []);
-    } catch (err) {
-      console.error(`Erro ao buscar ${table}:`, err);
-      setError(err);
-      setData([]); // Garante array vazio em caso de erro
+    } catch (error) {
+      console.error('❌ Erro ao buscar dados:', error);
+      setError(error.message || 'Erro desconhecido');
     } finally {
       setLoading(false);
     }
@@ -67,7 +62,7 @@ export function useSupabaseData(table, options = {}) {
     if (options.fetchOnMount !== false && user) {
       fetchData();
     }
-  }, [user, supabase, JSON.stringify(options.filters)]);
+  }, [user, table, options]);
 
   return {
     data,

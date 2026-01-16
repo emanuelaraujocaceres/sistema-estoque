@@ -1,8 +1,13 @@
 // Sistema de sincronização
 export const saveSyncedData = async (key, data) => {
-  localStorage.setItem(key, JSON.stringify(data));
-  window.dispatchEvent(new CustomEvent("products-updated"));
-  return true;
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    window.dispatchEvent(new CustomEvent("products-updated"));
+    return true;
+  } catch (error) {
+    console.error("❌ Erro ao salvar dados sincronizados:", error);
+    return false;
+  }
 };
 
 export const getSyncedData = async (key) => {
@@ -10,7 +15,7 @@ export const getSyncedData = async (key) => {
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : [];
   } catch (error) {
-    console.error("Erro:", error);
+    console.error("❌ Erro ao carregar dados sincronizados:", error);
     return [];
   }
 };

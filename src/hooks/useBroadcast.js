@@ -10,50 +10,58 @@ export function useBroadcast() {
   useEffect(() => {
     if (!user || !supabase) return;
 
-    console.log('🟡 Conectando ao canal de broadcast...');
-    
-    // Canal específico para este usuário
-    const channel = supabase.channel(`user-${user.id}`, {
-      config: {
-        broadcast: { self: true } // Permite receber suas próprias mensagens
-      }
-    });
+    console.log('🔵 Conectando ao canal de broadcast...');
 
-    // Quando receber uma mensagem
-    channel.on('broadcast', { event: 'sync' }, ({ payload }) => {
-      console.log('📨 Mensagem recebida:', payload);
-      setMessages(prev => [...prev, payload]);
-      
-      // Executar ações baseadas no tipo
-      handleIncomingMessage(payload);
-    });
+    let channel;
 
-    // Monitorar status da conexão
-    channel.subscribe((status) => {
-      console.log('🔌 Status do broadcast:', status);
-      setIsConnected(status === 'SUBSCRIBED');
-      
-      if (status === 'SUBSCRIBED') {
-        console.log('✅ Conectado ao broadcast!');
-        // Enviar mensagem de teste
-        channel.send({
-          type: 'broadcast',
-          event: 'sync',
-          payload: {
-            type: 'connection',
-            message: 'Dispositivo conectado',
-            userId: user.id,
-            device: navigator.userAgent.substring(0, 50),
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-    });
+    try {
+      channel = supabase.channel(`user-${user.id}`, {
+        config: {
+          broadcast: { self: true } // Permite receber suas próprias mensagens
+        }
+      });
+
+      // Quando receber uma mensagem
+      channel.on('broadcast', { event: 'sync' }, ({ payload }) => {
+        console.log('📨 Mensagem recebida:', payload);
+        setMessages(prev => [...prev, payload]);
+        
+        // Executar ações baseadas no tipo
+        handleIncomingMessage(payload);
+      });
+
+      // Monitorar status da conexão
+      channel.subscribe((status) => {
+        console.log('🔌 Status do broadcast:', status);
+        setIsConnected(status === 'SUBSCRIBED');
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Conectado ao broadcast!');
+          // Enviar mensagem de teste
+          channel.send({
+            type: 'broadcast',
+            event: 'sync',
+            payload: {
+              type: 'connection',
+              message: 'Dispositivo conectado',
+              userId: user.id,
+              device: navigator.userAgent.substring(0, 50),
+              timestamp: new Date().toISOString()
+            }
+          });
+        }
+      });
+    } catch (error) {
+      console.error('❌ Erro ao conectar ao canal de broadcast:', error);
+      setIsConnected(false);
+    }
 
     // Limpar quando desmontar
     return () => {
-      console.log('🔌 Desconectando do canal de broadcast...');
-      channel.unsubscribe();
+      if (channel) {
+        channel.unsubscribe();
+        console.log('🔴 Canal de broadcast desconectado.');
+      }
     };
   }, [user, supabase]);
 
@@ -116,34 +124,23 @@ export function useBroadcast() {
   };
 
   // Função para enviar mensagens
-  const sendMessage = useCallback((type, data) => {
-    if (!user || !supabase) {
-      console.warn('⚠️ Usuário não autenticado');
-      return;
-    }
-
-    const channel = supabase.channel(`user-${user.id}`);
-    
-    const payload = {
-      type,
-      data,
-      userId: user.id,
-      timestamp: new Date().toISOString(),
-      device: navigator.userAgent.substring(0, 50)
-    };
-
-    console.log('📤 Enviando mensagem:', payload);
-    
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        channel.send({
-          type: 'broadcast',
-          event: 'sync',
-          payload
-        });
+  const sendMessage = useCallback(
+    async (message) => {
+      if (!isConnected) {
+        console.warn('⚠️ Não conectado ao canal de broadcast.');
+        return;
       }
-    });
-  }, [user, supabase]);
+
+      try {
+        const channel = supabase.channel(`user-${user.id}`);
+        await channel.send({ type: 'broadcast', event: 'sync', payload: message });
+        console.log('📤 Mensagem enviada:', message);
+      } catch (error) {
+        console.error('❌ Erro ao enviar mensagem:', error);
+      }
+    },
+    [isConnected, user, supabase]
+  );
 
   return {
     isConnected,

@@ -43,13 +43,8 @@ export const useStock = () => {
       return true;
       
     } catch (error) {
-      console.error('❌ ERRO em updateStock:', error);
+      console.error('❌ Erro ao atualizar estoque:', error);
       setSyncStatus('error');
-      
-      // 🔥 SALVAMENTO DE EMERGÊNCIA
-      emergencyBackup(productId, quantityChange, error.message);
-      
-      return false;
     }
   }, [updateContextStock]);
 

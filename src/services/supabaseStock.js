@@ -8,18 +8,27 @@ export const supabaseStockService = {
         .from('produtos')
         .select('count', { count: 'exact', head: true })
         .limit(1);
-      
+
+      if (error) {
+        console.error('❌ Erro ao verificar conexão com Supabase:', error);
+        return {
+          connected: false,
+          error: error.message,
+        };
+      }
+
       return {
-        connected: !error,
-        error: error?.message
+        connected: true,
+        error: null,
       };
     } catch (error) {
+      console.error('❌ Erro inesperado ao verificar conexão com Supabase:', error);
       return {
         connected: false,
-        error: error.message
+        error: error.message,
       };
     }
-  }
+  },
 };
 
 export default supabaseStockService;

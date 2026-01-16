@@ -32,12 +32,12 @@ function generateUUID(seed) {
  */
 export async function syncProductsToSupabase(products, userId) {
   if (!userId || !products) {
-    console.warn('âš ï¸ syncProductsToSupabase: userId ou products ausentes', { userId, hasProducts: !!products });
+    console.warn('⚠️ syncProductsToSupabase: userId ou products ausentes', { userId, hasProducts: !!products });
     return false;
   }
-  
+
   try {
-    console.log('ðŸ”„ [supabaseSync] Sincronizando', products.length, 'produtos...', { userId });
+    console.log('🔄 [supabaseSync] Sincronizando', products.length, 'produtos...', { userId });
     
     // Preparar dados para Supabase - MAPEAR CAMPOS DO APP PARA BANCO
     const productsToSync = products.map(p => ({
