@@ -1,34 +1,14 @@
-﻿<!doctype html>
-<html lang="pt-BR">
+﻿<!DOCTYPE html>
+<html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sistema de Estoque</title>
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Script de pré-carregamento do Supabase (executa primeiro) -->
-    <script src="/preload-supabase.js"></script>
+    <title>Sistema Estoque & Caixa</title>
+    <!-- Apenas o essencial -->
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-    
-    <!-- Script para garantir que Link não cause erro -->
-    <script>
-      // Polyfill para prevenir erro "Link is not defined"
-      if (typeof window !== 'undefined' && typeof window.Link === 'undefined') {
-        window.Link = null;
-        console.log('[Polyfill] Link global definido como null para prevenir erros');
-      }
-      
-      // Verificar se preload funcionou
-      if (window.__SUPABASE_PRELOAD__) {
-        console.log('[Verificação] Preload executado com sucesso');
-      } else {
-        console.warn('[Verificação] Preload não foi executado');
-      }
-    </script>
+    <!-- O Vite injetará os scripts automaticamente -->
   </body>
 </html>
